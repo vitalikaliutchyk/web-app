@@ -7,29 +7,40 @@ on:
 jobs:
   check-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Для полной истории коммитов
 
     - name: Verify required files
       run: |
-        if [ ! -f "index.html" ]; then
-          echo "❌ Error: index.html not found!"
+        required_files=("index.html" "styles.css" "script.js")
+        missing_counter=0
+        
+        for file in "${required_files[@]}"; do
+          if [ ! -f "$file" ]; then
+            echo "❌ Error: $file not found!"
+            ((missing_counter++))
+          fi
+        done
+
+        if [ $missing_counter -ne 0 ]; then
+          echo "🚫 Missing $missing_counter required file(s)"
           exit 1
+        else
+          echo "✅ All required files present"
         fi
-        if [ ! -f "styles.css" ]; then
-          echo "❌ Error: styles.css not found!"
-          exit 1
-        fi
-        if [ ! -f "script.js" ]; then
-          echo "❌ Error: script.js not found!"
-          exit 1
-        fi
-        echo "✅ All required files present"
 
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./
+        force_orphan: true  # Очистка истории ветки gh-pages
+        full_commit_message: "Deploy: ${{ github.event.head_commit.message }}"
