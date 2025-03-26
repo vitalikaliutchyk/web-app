@@ -2,84 +2,59 @@ const elements = {
 	carForm: document.getElementById('car-form'),
 	identifierInput: document.getElementById('identifier-input'),
 	hoursInput: document.getElementById('hours'),
-	identifierType: document.getElementById('identifier-type'),
 	carTableBody: document.querySelector('#car-table tbody'),
 	savedHoursTableBody: document.getElementById('saved-hours-table-body'),
-	totalHoursElement: document.getElementById('total-hours'),
-	toggleTableButton: document.getElementById('toggle-table'),
-	toggleSavedDaysButton: document.getElementById('toggle-saved-days-table'),
+	totalCars: document.getElementById('total-cars'),
+	totalHours: document.getElementById('total-hours'),
 	tableContainer: document.getElementById('table-container'),
 	savedHoursContainer: document.getElementById('saved-hours-container'),
 }
 
-// Локальная база данных
 let carDatabase = JSON.parse(localStorage.getItem('carDatabase')) || []
 let savedHours = JSON.parse(localStorage.getItem('savedHours')) || []
-let lastSavedDate =
-	savedHours.length > 0 ? savedHours[savedHours.length - 1].date : null
 
-// Функция для сохранения данных в localStorage
-function saveToLocalStorage(key, value) {
-	localStorage.setItem(key, JSON.stringify(value))
+// Единый формат даты
+function getCurrentDate() {
+	const d = new Date()
+	return `${d.getDate().toString().padStart(2, '0')}.${(d.getMonth() + 1)
+		.toString()
+		.padStart(2, '0')}.${d.getFullYear()}`
 }
 
-// Функция для автоматического сохранения часов за предыдущий день
-function autoSavePreviousDayHours() {
-	const currentDate = new Date().toLocaleDateString()
+function saveData() {
+	localStorage.setItem('carDatabase', JSON.stringify(carDatabase))
+	localStorage.setItem('savedHours', JSON.stringify(savedHours))
+}
 
-	if (lastSavedDate !== currentDate) {
-		let totalHoursYesterday = 0
+function updateStats() {
+	const today = getCurrentDate()
+	let total = { cars: 0, hours: 0 }
 
-		// Собираем суммарные часы за предыдущий день
-		carDatabase.forEach(car => {
-			car.records.forEach(record => {
-				if (record.date === lastSavedDate) {
-					totalHoursYesterday += record.hours
-				}
-			})
+	carDatabase.forEach(car => {
+		car.records.forEach(record => {
+			if (record.date === today) {
+				total.cars++
+				total.hours += record.hours
+			}
 		})
+	})
 
-		// Сохраняем часы за предыдущий день
-		if (totalHoursYesterday > 0) {
-			savedHours.push({ date: lastSavedDate, totalHours: totalHoursYesterday })
-			saveToLocalStorage('savedHours', savedHours)
-			renderSavedHoursTable()
-		}
-	}
+	elements.totalCars.textContent = total.cars
+	elements.totalHours.textContent = total.hours.toFixed(1)
 }
 
-// Добавление записи
-function addCarRecord(identifier, hours) {
-	const date = new Date().toLocaleDateString()
-	let car = carDatabase.find(car => car.identifier === identifier)
-
-	if (!car) {
-		car = { identifier, records: [] }
-		carDatabase.push(car)
-	}
-
-	car.records.push({ date, hours })
-	saveToLocalStorage('carDatabase', carDatabase)
-	renderCarTable()
-}
-
-// Рендер таблицы автомобилей
 function renderCarTable() {
 	elements.carTableBody.innerHTML = ''
-	carDatabase.forEach((car, carIndex) => {
+	carDatabase.forEach((car, index) => {
 		car.records.forEach((record, recordIndex) => {
 			const row = document.createElement('tr')
 			row.innerHTML = `
-                <td contenteditable="true" class="editable-identifier" data-car-index="${carIndex}" data-record-index="${recordIndex}">
-                  ${car.identifier}
-                </td>
+                <td>${car.identifier}</td>
                 <td>${record.date}</td>
-                <td contenteditable="true" class="editable-hours" data-car-index="${carIndex}" data-record-index="${recordIndex}">
-                  ${record.hours.toFixed(1)}
-                </td>
+                <td>${record.hours.toFixed(1)}</td>
                 <td>
-                  <button class="edit" data-car-index="${carIndex}" data-record-index="${recordIndex}">Редактировать</button>
-                  <button class="delete" data-car-index="${carIndex}" data-record-index="${recordIndex}">Удалить</button>
+                    <button class="edit" data-index="${index}" data-record="${recordIndex}">✎</button>
+                    <button class="delete" data-index="${index}" data-record="${recordIndex}">🗑</button>
                 </td>
             `
 			elements.carTableBody.appendChild(row)
@@ -87,99 +62,57 @@ function renderCarTable() {
 	})
 }
 
-// Рендер сохранённых часов
-function renderSavedHoursTable() {
-	elements.savedHoursTableBody.innerHTML = ''
-	savedHours.forEach(day => {
-		const row = document.createElement('tr')
-		row.innerHTML = `
-            <td>${day.date}</td>
-            <td>${day.totalHours.toFixed(1)} ч</td>
-        `
-		elements.savedHoursTableBody.appendChild(row)
-	})
-}
-
-// Обработчик формы
 elements.carForm.addEventListener('submit', e => {
 	e.preventDefault()
-
-	const identifierType = elements.identifierType.value
-	const identifierInput = elements.identifierInput.value.trim()
+	const identifier = elements.identifierInput.value.trim()
 	const hours = parseFloat(elements.hoursInput.value)
 
-	if (isNaN(hours) || hours <= 0) {
-		alert('Введите корректное количество часов.')
-		return
-	}
+	if (identifier && hours > 0) {
+		const date = getCurrentDate()
+		let car = carDatabase.find(c => c.identifier === identifier)
 
-	addCarRecord(identifierInput, hours)
-	autoSavePreviousDayHours()
-	elements.carForm.reset()
+		if (!car) {
+			car = { identifier, records: [] }
+			carDatabase.push(car)
+		}
+
+		car.records.push({ date, hours })
+		saveData()
+		renderCarTable()
+		updateStats()
+		elements.carForm.reset()
+	}
 })
 
-// Удаление записей
-elements.carTableBody.addEventListener('click', e => {
-	const carIndex = e.target.dataset.carIndex
-	const recordIndex = e.target.dataset.recordIndex
-
+// Обработчик удаления и редактирования
+document.addEventListener('click', e => {
 	if (e.target.classList.contains('delete')) {
-		carDatabase[carIndex].records.splice(recordIndex, 1)
-		if (carDatabase[carIndex].records.length === 0)
-			carDatabase.splice(carIndex, 1)
-		saveToLocalStorage('carDatabase', carDatabase)
+		const index = e.target.dataset.index
+		const recordIndex = e.target.dataset.record
+
+		carDatabase[index].records.splice(recordIndex, 1)
+		if (carDatabase[index].records.length === 0) carDatabase.splice(index, 1)
+		saveData()
 		renderCarTable()
+		updateStats()
 	}
 
 	if (e.target.classList.contains('edit')) {
-		const newHours = prompt(
-			'Введите новые нормо-часы:',
-			carDatabase[carIndex].records[recordIndex].hours
+		const index = e.target.dataset.index
+		const recordIndex = e.target.dataset.record
+		const newHours = parseFloat(
+			prompt('Новые часы:', carDatabase[index].records[recordIndex].hours)
 		)
-		if (newHours !== null && !isNaN(newHours) && parseFloat(newHours) > 0) {
-			carDatabase[carIndex].records[recordIndex].hours = parseFloat(newHours)
-			saveToLocalStorage('carDatabase', carDatabase)
+
+		if (!isNaN(newHours)) {
+			carDatabase[index].records[recordIndex].hours = newHours
+			saveData()
 			renderCarTable()
+			updateStats()
 		}
 	}
 })
 
-// Показать/скрыть таблицу автомобилей
-elements.toggleTableButton.addEventListener('click', () => {
-	const isHidden = elements.tableContainer.classList.toggle('hidden')
-	if (isHidden) {
-		showNotification('Таблица скрыта.')
-	} else {
-		showNotification('Таблица отображена.')
-	}
-})
-
-// Показать/скрыть таблицу сохранённых дней
-elements.toggleSavedDaysButton.addEventListener('click', () => {
-	const isHidden = elements.savedHoursContainer.classList.toggle('hidden')
-	if (isHidden) {
-		showNotification('Сохранённые дни скрыты.')
-	} else {
-		showNotification('Сохранённые дни отображены.')
-	}
-})
-
-// Показать уведомление
-function showNotification(message) {
-	const notification = document.createElement('div')
-	notification.className = 'notification'
-	notification.textContent = message
-	document.body.appendChild(notification)
-	setTimeout(() => {
-		notification.classList.add('show')
-	}, 10)
-	setTimeout(() => {
-		notification.classList.remove('show')
-		setTimeout(() => notification.remove(), 500)
-	}, 3000)
-}
-
-// Инициализация
+// Первоначальная загрузка
 renderCarTable()
-renderSavedHoursTable()
-autoSavePreviousDayHours()
+updateStats()
