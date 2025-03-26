@@ -1,159 +1,128 @@
 body {
-    font-family: Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     margin: 0;
-    padding: 20px 10px;
-    box-sizing: border-box;
-    background-color: #f9f9f9;
+    padding: 15px;
+    background: #f0f2f5;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
 }
 
 .container {
     max-width: 100%;
-    margin: auto;
-    padding: 15px;
-    background: #fff;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin: 10px auto;
 }
 
 .stats-box {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 8px;
-    margin: 15px 0;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 20px 0;
     background: #f8f9fa;
-    padding: 12px;
+    padding: 15px;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .stats-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    font-size: 14px;
-    padding: 5px;
+    text-align: center;
+    padding: 10px;
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 .stats-item.highlight {
-    color: #007bff;
-    font-weight: bold;
-}
-
-h1, h2 {
-    text-align: center;
-    color: #333;
-    margin: 0.5em 0;
+    color: #1a73e8;
+    font-weight: 600;
 }
 
 form {
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    margin: 20px 0;
+    gap: 12px;
+    margin-bottom: 25px;
 }
 
 input, select, button {
     width: 100%;
     padding: 12px;
-    font-size: 16px;
     border: 1px solid #ddd;
-    border-radius: 6px;
+    border-radius: 8px;
+    font-size: 16px;
     box-sizing: border-box;
 }
 
 button {
-    background: #007bff;
+    background: #1a73e8;
     color: white;
     border: none;
+    font-weight: 500;
     cursor: pointer;
-    transition: background 0.3s ease;
-    min-height: 44px;
+    transition: background 0.2s;
 }
 
 button:hover {
-    background: green;
+    background: #1557b0;
+}
+
+#table-container {
+    max-height: 400px;
+    overflow-y: auto;
+    margin: 15px 0;
+    border: 1px solid #eee;
+    border-radius: 8px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+th {
+    background: #f8f9fa;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+button.delete {
+    background: #dc3545;
+    padding: 6px 12px;
+    margin: 2px;
+}
+
+button.edit {
+    background: #ffc107;
+    padding: 6px 12px;
+    margin: 2px;
 }
 
 .hidden {
     display: none;
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 15px;
-    font-size: 14px;
-}
-
-th, td {
-    border: 1px solid #ccc;
-    padding: 8px 6px;
-    text-align: left;
-    min-width: 60px;
-}
-
-th {
-    background-color: #f4f4f4;
-    font-weight: bold;
-}
-
-tr:nth-child(even) {
-    background-color: #f9f9f9;
-}
-
-#table-container {
-    margin-top: 10px;
-    max-height: 50vh;
-    overflow-y: auto;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-}
-
-button.delete {
-    background-color: #dc3545;
-    padding: 6px 12px;
-    margin: 2px;
-}
-
-button.delete:hover {
-    background-color: #c82333;
-}
-
-button.edit {
-    background-color: #ffc107;
-    padding: 6px 12px;
-    margin: 2px;
-}
-
-button.edit:hover {
-    background-color: #e0a800;
-}
-
 @media (max-width: 480px) {
-    .container {
-        padding: 10px;
-    }
-    
     .stats-box {
         grid-template-columns: 1fr;
     }
     
-    input, select {
+    th, td {
+        padding: 8px;
         font-size: 14px;
-        padding: 10px;
-    }
-    
-    #identifier-input {
-        font-size: 16px;
     }
     
     button {
         padding: 10px;
-    }
-    
-    table {
-        font-size: 13px;
+        font-size: 14px;
     }
 }

@@ -10,7 +10,6 @@
 <div class="container">
     <h1>Учёт автомобилей</h1>
     
-    <!-- Блок текущей статистики -->
     <div class="stats-box">
         <div class="stats-item">
             <span>Сегодня:</span>
@@ -47,39 +46,34 @@
     <button id="toggle-table">Показать/Скрыть таблицу</button>
     <div id="table-container" class="hidden">
         <h2>Список автомобилей</h2>
-        <table id="car-table" class="table-editable">
+        <table id="car-table">
             <thead>
                 <tr>
-                    <th>id(Номер)</th>
+                    <th>Идентификатор</th>
                     <th>Дата</th>
                     <th>Часы</th>
                     <th>Действия</th>
                 </tr>
             </thead>
-            <tbody>
-                <!-- Здесь будут отображаться данные -->
-            </tbody>
+            <tbody><!-- Данные будут здесь --></tbody>
         </table>
     </div>
 
-    <button id="toggle-saved-days-table">Показать/Скрыть сохранённые дни</button>
+    <button id="toggle-saved-days-table">Показать/Скрыть историю</button>
     <div id="saved-hours-container" class="hidden">
-        <h2>Сохранённые дни</h2>
+        <h2>История дней</h2>
         <table id="saved-hours-table">
             <thead>
                 <tr>
                     <th>Дата</th>
+                    <th>Авто</th>
                     <th>Часы</th>
                 </tr>
             </thead>
-            <tbody id="saved-hours-table-body">
-                <!-- Здесь будут отображаться сохранённые дни -->
-            </tbody>
+            <tbody id="saved-hours-table-body"><!-- История здесь --></tbody>
         </table>
     </div>
 </div>
-
-<div id="notifications-container"></div>
 
 <script src="script.js"></script>
 </body>
