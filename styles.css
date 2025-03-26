@@ -93,3 +93,27 @@ button.edit {
 button.edit:hover {
     background-color: darkorange;
 }
+
+.stats {
+    display: flex;
+    gap: 20px;
+    margin: 15px 0;
+    justify-content: center;
+}
+
+.stat-item {
+    background: #f8f9fa;
+    padding: 10px 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+button.edit, button.delete {
+    padding: 5px 10px;
+    margin: 2px;
+    border: none;
+    cursor: pointer;
+}
+
+button.edit { background: #ffc107; }
+button.delete { background: #dc3545; color: white; }
