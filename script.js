@@ -78,7 +78,7 @@ function renderCarTable() {
                   ${record.hours.toFixed(1)}
                 </td>
                 <td>
-                  <button class="edit" data-car-index="${carIndex}" data-record-index="${recordIndex}">Редактировать</button>
+                  <button class="edit" data-car-index="${carIndex}" data-record-index="${recordIndex}">Изменить</button>
                   <button class="delete" data-car-index="${carIndex}" data-record-index="${recordIndex}">Удалить</button>
                 </td>
             `
