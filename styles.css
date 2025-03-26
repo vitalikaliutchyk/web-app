@@ -35,6 +35,7 @@ form {
 }
 
 input, select, button {
+    margin: 5px auto;
     padding: 12px;
     border: 1px solid #ddd;
     border-radius: 8px;
@@ -72,6 +73,7 @@ table {
 }
 
 th, td {
+
     padding: 12px;
     border-bottom: 1px solid #eee;
     text-align: left;
