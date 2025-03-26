@@ -1,44 +1,75 @@
 body {
     font-family: Arial, sans-serif;
     margin: 0;
-    padding: 0;
+    padding: 20px 10px;
     box-sizing: border-box;
     background-color: #f9f9f9;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .container {
-    max-width: 600px;
+    max-width: 100%;
     margin: auto;
-    padding: 5px;
+    padding: 15px;
     background: #fff;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     border-radius: 8px;
 }
 
+.stats-box {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+    margin: 15px 0;
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.stats-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 14px;
+    padding: 5px;
+}
+
+.stats-item.highlight {
+    color: #007bff;
+    font-weight: bold;
+}
+
 h1, h2 {
     text-align: center;
     color: #333;
+    margin: 0.5em 0;
 }
 
 form {
     display: flex;
     flex-direction: column;
     gap: 15px;
+    margin: 20px 0;
 }
 
-input, button {
-    padding: 5px;
+input, select, button {
+    width: 100%;
+    padding: 12px;
     font-size: 16px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-sizing: border-box;
 }
 
 button {
-    margin-top: 10px;
     background: #007bff;
     color: white;
     border: none;
     cursor: pointer;
-    border-radius: 4px;
-    padding: 10px;
+    transition: background 0.3s ease;
+    min-height: 44px;
 }
 
 button:hover {
@@ -52,44 +83,77 @@ button:hover {
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 19px;
+    margin-top: 15px;
+    font-size: 14px;
 }
 
 th, td {
     border: 1px solid #ccc;
-    padding: 8px;
+    padding: 8px 6px;
     text-align: left;
+    min-width: 60px;
 }
 
 th {
     background-color: #f4f4f4;
+    font-weight: bold;
 }
 
 tr:nth-child(even) {
     background-color: #f9f9f9;
 }
 
-/* Добавляем вертикальную прокрутку для основной таблицы */
 #table-container {
     margin-top: 10px;
-    max-height: 300px;
+    max-height: 50vh;
     overflow-y: auto;
     border: 1px solid #ddd;
-    padding: 5px;
+    border-radius: 6px;
 }
 
 button.delete {
-    background-color: red;
+    background-color: #dc3545;
+    padding: 6px 12px;
+    margin: 2px;
 }
 
 button.delete:hover {
-    background-color: #cc0000;
+    background-color: #c82333;
 }
 
 button.edit {
-    background-color: orange;
+    background-color: #ffc107;
+    padding: 6px 12px;
+    margin: 2px;
 }
 
 button.edit:hover {
-    background-color: darkorange;
+    background-color: #e0a800;
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .stats-box {
+        grid-template-columns: 1fr;
+    }
+    
+    input, select {
+        font-size: 14px;
+        padding: 10px;
+    }
+    
+    #identifier-input {
+        font-size: 16px;
+    }
+    
+    button {
+        padding: 10px;
+    }
+    
+    table {
+        font-size: 13px;
+    }
 }
