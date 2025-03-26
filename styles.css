@@ -1,128 +1,95 @@
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: Arial, sans-serif;
     margin: 0;
-    padding: 15px;
-    background: #f0f2f5;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
+    padding: 0;
+    box-sizing: border-box;
+    background-color: #f9f9f9;
 }
 
 .container {
-    max-width: 100%;
-    background: white;
-    border-radius: 12px;
+    max-width: 600px;
+    margin: 20px auto;
     padding: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    margin: 10px auto;
-}
-
-.stats-box {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    margin: 20px 0;
-    background: #f8f9fa;
-    padding: 15px;
+    background: #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     border-radius: 8px;
 }
 
-.stats-item {
+h1, h2 {
     text-align: center;
-    padding: 10px;
-    background: white;
-    border-radius: 6px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
-
-.stats-item.highlight {
-    color: #1a73e8;
-    font-weight: 600;
+    color: #333;
 }
 
 form {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    margin-bottom: 25px;
+    gap: 15px;
 }
 
-input, select, button {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
+input, button {
+    padding: 5px;
     font-size: 16px;
-    box-sizing: border-box;
 }
 
 button {
-    background: #1a73e8;
+    margin-top: 10px;
+    background: #007bff;
     color: white;
     border: none;
-    font-weight: 500;
     cursor: pointer;
-    transition: background 0.2s;
+    border-radius: 4px;
+    padding: 10px;
 }
 
 button:hover {
-    background: #1557b0;
-}
-
-#table-container {
-    max-height: 400px;
-    overflow-y: auto;
-    margin: 15px 0;
-    border: 1px solid #eee;
-    border-radius: 8px;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
-}
-
-th, td {
-    padding: 12px;
-    text-align: left;
-    border-bottom: 1px solid #eee;
-}
-
-th {
-    background: #f8f9fa;
-    position: sticky;
-    top: 0;
-    z-index: 1;
-}
-
-button.delete {
-    background: #dc3545;
-    padding: 6px 12px;
-    margin: 2px;
-}
-
-button.edit {
-    background: #ffc107;
-    padding: 6px 12px;
-    margin: 2px;
+    background: green;
 }
 
 .hidden {
     display: none;
 }
 
-@media (max-width: 480px) {
-    .stats-box {
-        grid-template-columns: 1fr;
-    }
-    
-    th, td {
-        padding: 8px;
-        font-size: 14px;
-    }
-    
-    button {
-        padding: 10px;
-        font-size: 14px;
-    }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 19px;
+}
+
+th, td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: left;
+}
+
+th {
+    background-color: #f4f4f4;
+}
+
+tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+/* Добавляем вертикальную прокрутку для основной таблицы */
+#table-container {
+    margin-top: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    padding: 5px;
+}
+
+button.delete {
+    background-color: red;
+}
+
+button.delete:hover {
+    background-color: #cc0000;
+}
+
+button.edit {
+    background-color: orange;
+}
+
+button.edit:hover {
+    background-color: darkorange;
 }
