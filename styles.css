@@ -14,19 +14,16 @@ body {
 }
 
 .app-header {
-    text-align: center;
-    padding: 20px 0;
-    background: #007bff;
-    color: white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    border-radius: 12px;
-    margin-bottom: 10px;
+    max-width: 800px;
+    margin: 20px auto 0;
+    padding: 0 20px;
 }
 
 .app-header h1 {
     margin: 0;
     font-size: 2em;
-    font-weight: 500;
+    color: #333;
+    text-align: center;
 }
 
 
