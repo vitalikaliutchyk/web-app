@@ -15,14 +15,13 @@ const elements = {
 let carDatabase = JSON.parse(localStorage.getItem('carDatabase')) || []
 let savedDays = JSON.parse(localStorage.getItem('savedDays')) || []
 
-// Инициализация
 function init() {
 	renderCarTable()
+	renderSavedHoursTable()
 	updateStats()
 	bindEvents()
 }
 
-// Привязка событий
 function bindEvents() {
 	elements.carForm.addEventListener('submit', handleFormSubmit)
 	elements.toggleTableButton.addEventListener('click', () =>
@@ -34,7 +33,6 @@ function bindEvents() {
 	document.addEventListener('click', handleTableActions)
 }
 
-// Основные функции
 function toggleElement(element) {
 	element.classList.toggle('hidden')
 }
@@ -68,7 +66,6 @@ function updateStats() {
 	elements.totalHours.textContent = total.hours.toFixed(1)
 }
 
-// Обработчики
 function handleFormSubmit(e) {
 	e.preventDefault()
 	const identifier = elements.identifierInput.value.trim()
@@ -86,6 +83,7 @@ function handleFormSubmit(e) {
 		car.records.push({ date, hours })
 		saveData()
 		renderCarTable()
+		renderSavedHoursTable()
 		updateStats()
 		elements.carForm.reset()
 	}
@@ -100,6 +98,7 @@ function handleTableActions(e) {
 		if (carDatabase[index].records.length === 0) carDatabase.splice(index, 1)
 		saveData()
 		renderCarTable()
+		renderSavedHoursTable()
 		updateStats()
 	}
 
@@ -114,12 +113,12 @@ function handleTableActions(e) {
 			carDatabase[index].records[recordIndex].hours = newHours
 			saveData()
 			renderCarTable()
+			renderSavedHoursTable()
 			updateStats()
 		}
 	}
 }
 
-// Рендер таблиц
 function renderCarTable() {
 	elements.carTableBody.innerHTML = carDatabase
 		.flatMap((car, index) =>
@@ -140,5 +139,42 @@ function renderCarTable() {
 		.join('')
 }
 
-// Запуск приложения
+function renderSavedHoursTable() {
+	const allRecords = carDatabase.flatMap(car => car.records)
+	const daysMap = {}
+
+	allRecords.forEach(record => {
+		if (!daysMap[record.date]) {
+			daysMap[record.date] = {
+				cars: 0,
+				hours: 0,
+			}
+		}
+		daysMap[record.date].cars++
+		daysMap[record.date].hours += record.hours
+	})
+
+	const sortedDays = Object.entries(daysMap)
+		.map(([date, data]) => ({ date, ...data }))
+		.sort((a, b) => {
+			const [dayA, monthA, yearA] = a.date.split('.')
+			const [dayB, monthB, yearB] = b.date.split('.')
+			return (
+				new Date(yearB, monthB - 1, dayB) - new Date(yearA, monthA - 1, dayA)
+			)
+		})
+
+	elements.savedHoursTableBody.innerHTML = sortedDays
+		.map(
+			day => `
+            <tr>
+                <td>${day.date}</td>
+                <td>${day.cars}</td>
+                <td>${day.hours.toFixed(1)}</td>
+            </tr>
+        `
+		)
+		.join('')
+}
+
 init()
