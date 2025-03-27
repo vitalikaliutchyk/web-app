@@ -13,9 +13,22 @@ body {
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-h1 {
+.app-header {
     text-align: center;
+    padding: 20px 0;
+    background: #007bff;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    margin-bottom: 10px;
 }
+
+.app-header h1 {
+    margin: 0;
+    font-size: 2em;
+    font-weight: 500;
+}
+
 
 .stats {
     display: flex;
