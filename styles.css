@@ -71,6 +71,7 @@ button {
     border: none;
     cursor: pointer;
     transition: background 0.2s;
+    border-radius: 20px;
 }
 
 button:hover {
