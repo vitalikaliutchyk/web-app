@@ -13,9 +13,7 @@ const elements = {
 let carDatabase = JSON.parse(localStorage.getItem('carDatabase')) || [];
 
 function init() {
-    renderCarTable();
-    renderSavedHoursTable();
-    updateStats();
+    renderAll();
     bindEvents();
     checkMobile();
 }
@@ -94,7 +92,7 @@ function handleFormSubmit(e) {
     const identifier = elements.identifierInput.value.trim();
     const hours = parseFloat(elements.hoursInput.value);
 
-    if (identifier && hours > 0) {
+    if (identifier && !isNaN(hours) && hours > 0) {
         const date = getCurrentDate();
         let car = carDatabase.find(c => c.identifier === identifier);
 
@@ -105,11 +103,11 @@ function handleFormSubmit(e) {
 
         car.records.push({ date, hours });
         saveData();
-        renderCarTable();
-        renderSavedHoursTable();
-        updateStats();
+        renderAll();
         elements.carForm.reset();
+        return;
     }
+    alert('Пожалуйста, заполните все поля корректно!');
 }
 
 function handleTableActions(e) {
@@ -135,8 +133,9 @@ function handleDelete(e) {
 function handleEdit(e) {
     const index = e.target.dataset.index;
     const recordIndex = e.target.dataset.record;
+    const currentHours = carDatabase[index].records[recordIndex].hours;
     const newHours = parseFloat(
-        prompt('Введите новые часы:', carDatabase[index].records[recordIndex].hours)
+        prompt('Введите новые часы:', currentHours)
     );
 
     if (!isNaN(newHours) {
