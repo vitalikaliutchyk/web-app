@@ -138,7 +138,7 @@ function handleEdit(e) {
         prompt('Введите новые часы:', currentHours)
     );
 
-    if (!isNaN(newHours) {
+    if (!isNaN(newHours)) {
         carDatabase[index].records[recordIndex].hours = newHours;
         saveData();
         renderAll();
