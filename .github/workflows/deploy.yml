@@ -2,7 +2,7 @@ name: Deploy Static Site
 
 on:
   push:
-    branches: [ "developer-saved-days" ]
+    branches: [ "main" ]
 
 jobs:
   check-and-deploy:
