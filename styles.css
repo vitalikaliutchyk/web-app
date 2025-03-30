@@ -66,7 +66,7 @@ input, select, button {
 }
 
 button {
-    background: #007bff;
+    background: #035dfa;
     color: white;
     border: none;
     cursor: pointer;
@@ -75,7 +75,7 @@ button {
 }
 
 button:hover {
-    background: #0056b3;
+    background: #08b157;
 }
 
 .hidden {
