@@ -232,4 +232,24 @@ function exportFullHistory(format) {
 	}
 }
 
+function toggleFabMenu() {
+	const fabMenu = document.querySelector('.fab-menu')
+	fabMenu.classList.toggle('hidden')
+
+	// Закрытие меню при клике вне его
+	if (!fabMenu.classList.contains('hidden')) {
+		setTimeout(() => {
+			document.addEventListener('click', closeFabMenuOnClickOutside)
+		}, 10)
+	}
+}
+
+function closeFabMenuOnClickOutside(e) {
+	const fabContainer = document.querySelector('.fab-container')
+	if (!fabContainer.contains(e.target)) {
+		document.querySelector('.fab-menu').classList.add('hidden')
+		document.removeEventListener('click', closeFabMenuOnClickOutside)
+	}
+}
+
 init()
