@@ -1,255 +1,281 @@
 const elements = {
-	carForm: document.getElementById('car-form'),
-	identifierInput: document.getElementById('identifier-input'),
-	hoursInput: document.getElementById('hours'),
-	carTableBody: document.querySelector('#car-table tbody'),
-	savedHoursTableBody: document.getElementById('saved-hours-table-body'),
-	totalCars: document.getElementById('total-cars'),
-	totalHours: document.getElementById('total-hours'),
-	toggleTableButton: document.getElementById('toggle-table'),
-	tableContainer: document.getElementById('table-container'),
-	savedHoursContainer: document.getElementById('saved-hours-container'),
-	toggleSavedDaysButton: document.getElementById('toggle-saved-days-table'),
-}
+    carForm: document.getElementById('car-form'),
+    identifierInput: document.getElementById('identifier-input'),
+    hoursInput: document.getElementById('hours'),
+    carTableBody: document.querySelector('#car-table tbody'),
+    savedHoursTableBody: document.getElementById('saved-hours-table-body'),
+    totalCars: document.getElementById('total-cars'),
+    totalHours: document.getElementById('total-hours'),
+    tableContainer: document.getElementById('table-container'),
+    savedHoursContainer: document.getElementById('saved-hours-container')
+};
 
-let carDatabase = JSON.parse(localStorage.getItem('carDatabase')) || []
-let savedDays = JSON.parse(localStorage.getItem('savedDays')) || []
+let carDatabase = JSON.parse(localStorage.getItem('carDatabase')) || [];
 
 function init() {
-	renderCarTable()
-	renderSavedHoursTable()
-	updateStats()
-	bindEvents()
+    renderCarTable();
+    renderSavedHoursTable();
+    updateStats();
+    bindEvents();
+    checkMobile();
 }
 
 function bindEvents() {
-	elements.carForm.addEventListener('submit', handleFormSubmit)
-	elements.toggleTableButton.addEventListener('click', () =>
-		toggleElement(elements.tableContainer)
-	)
-	elements.toggleSavedDaysButton.addEventListener('click', () =>
-		toggleElement(elements.savedHoursContainer)
-	)
-	document.addEventListener('click', handleTableActions)
+    elements.carForm.addEventListener('submit', handleFormSubmit);
+    document.addEventListener('click', handleTableActions);
+    window.addEventListener('resize', checkMobile);
+    
+    // Обработчики для FAB меню
+    document.querySelectorAll('.fab-item').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const action = e.currentTarget.dataset.action;
+            handleFabAction(action);
+            toggleFabMenu();
+        });
+    });
+}
+
+function handleFabAction(action) {
+    switch(action) {
+        case 'toggle-table':
+            toggleElement(elements.tableContainer);
+            break;
+        case 'toggle-history':
+            toggleElement(elements.savedHoursContainer);
+            break;
+        case 'export-csv':
+            exportFullHistory('csv');
+            break;
+        case 'export-json':
+            exportFullHistory('json');
+            break;
+    }
 }
 
 function toggleElement(element) {
-	element.classList.toggle('hidden')
+    element.classList.toggle('hidden');
+    if (!element.classList.contains('hidden')) {
+        setTimeout(() => {
+            element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+    }
 }
 
 function getCurrentDate() {
-	const d = new Date()
-	return `${d.getDate().toString().padStart(2, '0')}.${(d.getMonth() + 1)
-		.toString()
-		.padStart(2, '0')}.${d.getFullYear()}`
+    const d = new Date();
+    return `${d.getDate().toString().padStart(2, '0')}.${(d.getMonth() + 1)
+        .toString()
+        .padStart(2, '0')}.${d.getFullYear()}`;
 }
 
 function saveData() {
-	localStorage.setItem('carDatabase', JSON.stringify(carDatabase))
-	localStorage.setItem('savedDays', JSON.stringify(savedDays))
+    localStorage.setItem('carDatabase', JSON.stringify(carDatabase));
 }
 
 function updateStats() {
-	const today = getCurrentDate()
-	let total = { cars: 0, hours: 0 }
+    const today = getCurrentDate();
+    let total = { cars: 0, hours: 0 };
 
-	carDatabase.forEach(car => {
-		car.records.forEach(record => {
-			if (record.date === today) {
-				total.cars++
-				total.hours += record.hours
-			}
-		})
-	})
+    carDatabase.forEach(car => {
+        car.records.forEach(record => {
+            if (record.date === today) {
+                total.cars++;
+                total.hours += record.hours;
+            }
+        });
+    });
 
-	elements.totalCars.textContent = total.cars
-	elements.totalHours.textContent = total.hours.toFixed(1)
+    elements.totalCars.textContent = total.cars;
+    elements.totalHours.textContent = total.hours.toFixed(1);
 }
 
 function handleFormSubmit(e) {
-	e.preventDefault()
-	const identifier = elements.identifierInput.value.trim()
-	const hours = parseFloat(elements.hoursInput.value)
+    e.preventDefault();
+    const identifier = elements.identifierInput.value.trim();
+    const hours = parseFloat(elements.hoursInput.value);
 
-	if (identifier && hours > 0) {
-		const date = getCurrentDate()
-		let car = carDatabase.find(c => c.identifier === identifier)
+    if (identifier && hours > 0) {
+        const date = getCurrentDate();
+        let car = carDatabase.find(c => c.identifier === identifier);
 
-		if (!car) {
-			car = { identifier, records: [] }
-			carDatabase.push(car)
-		}
+        if (!car) {
+            car = { identifier, records: [] };
+            carDatabase.push(car);
+        }
 
-		car.records.push({ date, hours })
-		saveData()
-		renderCarTable()
-		renderSavedHoursTable()
-		updateStats()
-		elements.carForm.reset()
-	}
+        car.records.push({ date, hours });
+        saveData();
+        renderCarTable();
+        renderSavedHoursTable();
+        updateStats();
+        elements.carForm.reset();
+    }
 }
 
 function handleTableActions(e) {
-	if (e.target.classList.contains('delete')) {
-		const index = e.target.dataset.index
-		const recordIndex = e.target.dataset.record
+    if (e.target.classList.contains('delete')) {
+        handleDelete(e);
+    } else if (e.target.classList.contains('edit')) {
+        handleEdit(e);
+    }
+}
 
-		carDatabase[index].records.splice(recordIndex, 1)
-		if (carDatabase[index].records.length === 0) carDatabase.splice(index, 1)
-		saveData()
-		renderCarTable()
-		renderSavedHoursTable()
-		updateStats()
-	}
+function handleDelete(e) {
+    const index = e.target.dataset.index;
+    const recordIndex = e.target.dataset.record;
 
-	if (e.target.classList.contains('edit')) {
-		const index = e.target.dataset.index
-		const recordIndex = e.target.dataset.record
-		const newHours = parseFloat(
-			prompt('Новые часы:', carDatabase[index].records[recordIndex].hours)
-		)
+    carDatabase[index].records.splice(recordIndex, 1);
+    if (carDatabase[index].records.length === 0) {
+        carDatabase.splice(index, 1);
+    }
+    saveData();
+    renderAll();
+}
 
-		if (!isNaN(newHours)) {
-			carDatabase[index].records[recordIndex].hours = newHours
-			saveData()
-			renderCarTable()
-			renderSavedHoursTable()
-			updateStats()
-		}
-	}
+function handleEdit(e) {
+    const index = e.target.dataset.index;
+    const recordIndex = e.target.dataset.record;
+    const newHours = parseFloat(
+        prompt('Введите новые часы:', carDatabase[index].records[recordIndex].hours)
+    );
+
+    if (!isNaN(newHours) {
+        carDatabase[index].records[recordIndex].hours = newHours;
+        saveData();
+        renderAll();
+    }
+}
+
+function renderAll() {
+    renderCarTable();
+    renderSavedHoursTable();
+    updateStats();
 }
 
 function renderCarTable() {
-	elements.carTableBody.innerHTML = carDatabase
-		.flatMap((car, index) =>
-			car.records.map(
-				(record, recordIndex) => `
+    elements.carTableBody.innerHTML = carDatabase
+        .flatMap((car, index) =>
+            car.records.map((record, recordIndex) => `
                 <tr>
                     <td>${car.identifier}</td>
                     <td>${record.date}</td>
                     <td>${record.hours.toFixed(1)}</td>
                     <td>
-                        <button class="edit" data-index="${index}" data-record="${recordIndex}">✎</button>
-                        <button class="delete" data-index="${index}" data-record="${recordIndex}">🗑</button>
+                        <button class="edit" 
+                                data-index="${index}" 
+                                data-record="${recordIndex}">
+                            ✎
+                        </button>
+                        <button class="delete" 
+                                data-index="${index}" 
+                                data-record="${recordIndex}">
+                            🗑
+                        </button>
                     </td>
                 </tr>
-            `
-			)
-		)
-		.join('')
+            `)
+        )
+        .join('');
 }
 
 function renderSavedHoursTable() {
-	const allRecords = carDatabase.flatMap(car => car.records)
-	const daysMap = {}
+    const daysMap = carDatabase
+        .flatMap(car => car.records)
+        .reduce((acc, record) => {
+            acc[record.date] = acc[record.date] || { cars: 0, hours: 0 };
+            acc[record.date].cars++;
+            acc[record.date].hours += record.hours;
+            return acc;
+        }, {});
 
-	allRecords.forEach(record => {
-		if (!daysMap[record.date]) {
-			daysMap[record.date] = {
-				cars: 0,
-				hours: 0,
-			}
-		}
-		daysMap[record.date].cars++
-		daysMap[record.date].hours += record.hours
-	})
+    const sortedDays = Object.entries(daysMap)
+        .map(([date, data]) => ({ date, ...data }))
+        .sort((a, b) => {
+            const [dA, mA, yA] = a.date.split('.');
+            const [dB, mB, yB] = b.date.split('.');
+            return new Date(yB, mB-1, dB) - new Date(yA, mA-1, dA);
+        });
 
-	const sortedDays = Object.entries(daysMap)
-		.map(([date, data]) => ({ date, ...data }))
-		.sort((a, b) => {
-			const [dayA, monthA, yearA] = a.date.split('.')
-			const [dayB, monthB, yearB] = b.date.split('.')
-			return (
-				new Date(yearB, monthB - 1, dayB) - new Date(yearA, monthA - 1, dayA)
-			)
-		})
-
-	elements.savedHoursTableBody.innerHTML = sortedDays
-		.map(
-			day => `
+    elements.savedHoursTableBody.innerHTML = sortedDays
+        .map(day => `
             <tr>
                 <td>${day.date}</td>
                 <td>${day.cars}</td>
                 <td>${day.hours.toFixed(1)}</td>
             </tr>
-        `
-		)
-		.join('')
+        `).join('');
 }
 
 function getAllRepairsData() {
-	return carDatabase
-		.flatMap(car =>
-			car.records.map(record => ({
-				date: record.date,
-				identifier: car.identifier,
-				hours: record.hours,
-			}))
-		)
-		.sort((a, b) => {
-			const [dayA, monthA, yearA] = a.date.split('.')
-			const [dayB, monthB, yearB] = b.date.split('.')
-			return (
-				new Date(yearB, monthB - 1, dayB) - new Date(yearA, monthA - 1, dayA)
-			)
-		})
+    return carDatabase
+        .flatMap(car => car.records.map(record => ({
+            date: record.date,
+            identifier: car.identifier,
+            hours: record.hours
+        })))
+        .sort((a, b) => {
+            const [dA, mA, yA] = a.date.split('.');
+            const [dB, mB, yB] = b.date.split('.');
+            return new Date(yB, mB-1, dB) - new Date(yA, mA-1, dA);
+        });
 }
 
 function exportFullHistory(format) {
-	const repairsData = getAllRepairsData()
-	const today = new Date().toISOString().slice(0, 10)
+    const data = getAllRepairsData();
+    const today = new Date().toISOString().slice(0, 10);
 
-	if (format === 'csv') {
-		// CSV экспорт
-		const csvHeader = 'Дата;Идентификатор;Нормо-часы'
-		const csvRows = repairsData.map(
-			item => `${item.date};${item.identifier};${item.hours.toFixed(1)}`
-		)
-		const csvContent = [csvHeader, ...csvRows].join('\n')
+    if (format === 'csv') {
+        const csvContent = [
+            'Дата;Идентификатор;Часы',
+            ...data.map(item => `${item.date};${item.identifier};${item.hours.toFixed(1)}`)
+        ].join('\n');
 
-		const blob = new Blob(['\ufeff' + csvContent], {
-			type: 'text/csv;charset=utf-8',
-		})
-		const link = document.createElement('a')
-		link.href = URL.createObjectURL(blob)
-		link.download = `полная_история_ремонтов_${today}.csv`
-		link.click()
-	} else if (format === 'json') {
-		// JSON экспорт
-		const jsonData = {
-			generated: new Date().toISOString(),
-			totalRecords: repairsData.length,
-			repairs: repairsData,
-		}
+        const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8' });
+        downloadFile(blob, `история_ремонтов_${today}.csv`);
+    } else {
+        const jsonData = {
+            generated: new Date().toISOString(),
+            totalRecords: data.length,
+            repairs: data
+        };
+        const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
+        downloadFile(blob, `история_ремонтов_${today}.json`);
+    }
+}
 
-		const blob = new Blob([JSON.stringify(jsonData, null, 2)], {
-			type: 'application/json',
-		})
-		const link = document.createElement('a')
-		link.href = URL.createObjectURL(blob)
-		link.download = `полная_история_ремонтов_${today}.json`
-		link.click()
-	}
+function downloadFile(blob, filename) {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 function toggleFabMenu() {
-	const fabMenu = document.querySelector('.fab-menu')
-	fabMenu.classList.toggle('hidden')
-
-	// Закрытие меню при клике вне его
-	if (!fabMenu.classList.contains('hidden')) {
-		setTimeout(() => {
-			document.addEventListener('click', closeFabMenuOnClickOutside)
-		}, 10)
-	}
+    const fabMain = document.querySelector('.fab-main');
+    const fabMenu = document.querySelector('.fab-menu');
+    
+    fabMain.classList.toggle('active');
+    fabMenu.classList.toggle('hidden');
+    
+    if (!fabMenu.classList.contains('hidden')) {
+        setTimeout(() => {
+            document.addEventListener('click', closeFabMenuOnClickOutside);
+        }, 10);
+    }
 }
 
 function closeFabMenuOnClickOutside(e) {
-	const fabContainer = document.querySelector('.fab-container')
-	if (!fabContainer.contains(e.target)) {
-		document.querySelector('.fab-menu').classList.add('hidden')
-		document.removeEventListener('click', closeFabMenuOnClickOutside)
-	}
+    const fabContainer = document.querySelector('.fab-container');
+    if (!fabContainer.contains(e.target)) {
+        toggleFabMenu();
+        document.removeEventListener('click', closeFabMenuOnClickOutside);
+    }
 }
 
-init()
+function checkMobile() {
+    document.body.classList.toggle('mobile', window.innerWidth < 768);
+}
+
+init();
