@@ -177,4 +177,59 @@ function renderSavedHoursTable() {
 		.join('')
 }
 
+function getAllRepairsData() {
+	return carDatabase
+		.flatMap(car =>
+			car.records.map(record => ({
+				date: record.date,
+				identifier: car.identifier,
+				hours: record.hours,
+			}))
+		)
+		.sort((a, b) => {
+			const [dayA, monthA, yearA] = a.date.split('.')
+			const [dayB, monthB, yearB] = b.date.split('.')
+			return (
+				new Date(yearB, monthB - 1, dayB) - new Date(yearA, monthA - 1, dayA)
+			)
+		})
+}
+
+function exportFullHistory(format) {
+	const repairsData = getAllRepairsData()
+	const today = new Date().toISOString().slice(0, 10)
+
+	if (format === 'csv') {
+		// CSV экспорт
+		const csvHeader = 'Дата;Идентификатор;Нормо-часы'
+		const csvRows = repairsData.map(
+			item => `${item.date};${item.identifier};${item.hours.toFixed(1)}`
+		)
+		const csvContent = [csvHeader, ...csvRows].join('\n')
+
+		const blob = new Blob(['\ufeff' + csvContent], {
+			type: 'text/csv;charset=utf-8',
+		})
+		const link = document.createElement('a')
+		link.href = URL.createObjectURL(blob)
+		link.download = `полная_история_ремонтов_${today}.csv`
+		link.click()
+	} else if (format === 'json') {
+		// JSON экспорт
+		const jsonData = {
+			generated: new Date().toISOString(),
+			totalRecords: repairsData.length,
+			repairs: repairsData,
+		}
+
+		const blob = new Blob([JSON.stringify(jsonData, null, 2)], {
+			type: 'application/json',
+		})
+		const link = document.createElement('a')
+		link.href = URL.createObjectURL(blob)
+		link.download = `полная_история_ремонтов_${today}.json`
+		link.click()
+	}
+}
+
 init()
