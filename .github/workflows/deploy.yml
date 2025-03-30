@@ -2,7 +2,7 @@ name: Deploy Static Site
 
 on:
   push:
-    branches: [ "export-of-repairs" ]
+    branches: [ "export-2.0" ]
 
 jobs:
   check-and-deploy:
