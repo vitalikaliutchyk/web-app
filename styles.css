@@ -77,9 +77,9 @@ label {
 }
 
 input, select {
-    width: 100%;
+    
     padding: 0.8rem;
-    border: 1px solid #ddd;
+    
     border-radius: 8px;
     font-size: 1rem;
     margin-top: 0.3rem;
