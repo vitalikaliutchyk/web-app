@@ -62,6 +62,14 @@ body {
     color: #1a73e8;
 }
 
+input:invalid {
+    border-color: #dc3545;
+}
+
+input:valid {
+    border-color: #28a745;
+}
+
 form {
     display: grid;
     gap: 1rem;

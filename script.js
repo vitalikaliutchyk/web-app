@@ -20,8 +20,34 @@ function init() {
 
 function bindEvents() {
     elements.carForm.addEventListener('submit', handleFormSubmit);
+    elements.identifierInput.addEventListener('input', validateIdentifier)
+	elements.hoursInput.addEventListener('input', validateHours)
     document.addEventListener('click', handleTableActions);
     window.addEventListener('resize', checkMobile);
+
+    function validateIdentifier() {
+			const identifierType = document.getElementById('identifier-type').value
+			const identifier = elements.identifierInput.value.trim().toUpperCase()
+
+			if (identifierType === 'reg') {
+				elements.identifierInput.setCustomValidity(
+					/^[0-9]{4}\s?[A-Z]{2}-[1-7]$/.test(identifier)
+						? ''
+						: 'Неверный формат номера'
+				)
+			} else {
+				elements.identifierInput.setCustomValidity(
+					/^[A-Z0-9]{4}$/.test(identifier) ? '' : 'Нужно 4 заглавных символа'
+				)
+			}
+		}
+
+		function validateHours() {
+			const hours = parseFloat(elements.hoursInput.value)
+			elements.hoursInput.setCustomValidity(
+				hours >= 0.1 && hours <= 24 ? '' : 'Введите значение от 0.1 до 24'
+			)
+		}
     
     // Обработчики для FAB меню
     document.querySelectorAll('.fab-item').forEach(button => {
@@ -88,26 +114,50 @@ function updateStats() {
 }
 
 function handleFormSubmit(e) {
-    e.preventDefault();
-    const identifier = elements.identifierInput.value.trim();
-    const hours = parseFloat(elements.hoursInput.value);
+	e.preventDefault()
+	const identifierType = document.getElementById('identifier-type').value
+	const identifier = elements.identifierInput.value.trim().toUpperCase()
+	const hours = parseFloat(elements.hoursInput.value)
 
-    if (identifier && !isNaN(hours) && hours > 0) {
-        const date = getCurrentDate();
-        let car = carDatabase.find(c => c.identifier === identifier);
+	// Валидация для Беларуси
+	let isValidIdentifier = false
+	let errorMessage = ''
 
-        if (!car) {
-            car = { identifier, records: [] };
-            carDatabase.push(car);
-        }
+	if (identifierType === 'reg') {
+		// Проверка гос. номера РБ (примеры: 1234 AB-1, 5678 CE-7, 9999 XX-2)
+		const regEx = /^[0-9]{4}\s?[A-Z]{2}-[1-7]$/
+		isValidIdentifier = regEx.test(identifier)
+		errorMessage = 'Неверный формат гос. номера (Пример: 1234 AB-1)'
+	} else {
+		// Проверка последних 4 символов VIN (буквы и цифры)
+		isValidIdentifier =
+			identifier.length === 4 && /^[A-Z0-9]{4}$/.test(identifier)
+		errorMessage = 'ВИН должен содержать 4 заглавных символа (буквы или цифры)'
+	}
 
-        car.records.push({ date, hours });
-        saveData();
-        renderAll();
-        elements.carForm.reset();
-        return;
-    }
-    alert('Пожалуйста, заполните все поля корректно!');
+	// Валидация часов (0.1 - 24)
+	const isValidHours = !isNaN(hours) && hours >= 0.1 && hours <= 24
+
+	if (isValidIdentifier && isValidHours) {
+		const date = getCurrentDate()
+		let car = carDatabase.find(c => c.identifier === identifier)
+
+		if (!car) {
+			car = { identifier, records: [] }
+			carDatabase.push(car)
+		}
+
+		car.records.push({ date, hours })
+		saveData()
+		renderAll()
+		elements.carForm.reset()
+		showValidationMessage('Данные успешно добавлены!', true)
+	} else {
+		let errors = []
+		if (!isValidIdentifier) errors.push(errorMessage)
+		if (!isValidHours) errors.push('Часы должны быть от 0.1 до 24')
+		showValidationMessage(errors.join('<br>'), false)
+	}
 }
 
 function handleTableActions(e) {
