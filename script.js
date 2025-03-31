@@ -19,45 +19,52 @@ function init() {
 }
 
 function bindEvents() {
-    elements.carForm.addEventListener('submit', handleFormSubmit);
-    elements.identifierInput.addEventListener('input', validateIdentifier)
+	elements.carForm.addEventListener('submit', handleFormSubmit)
+	elements.identifierInput.addEventListener('input', validateIdentifier)
 	elements.hoursInput.addEventListener('input', validateHours)
-    document.addEventListener('click', handleTableActions);
-    window.addEventListener('resize', checkMobile);
+	document.addEventListener('click', handleTableActions)
+	window.addEventListener('resize', checkMobile)
 
-    function validateIdentifier() {
-			const identifierType = document.getElementById('identifier-type').value
-			const identifier = elements.identifierInput.value.trim().toUpperCase()
+	// Обработчики для FAB меню
+	document.querySelectorAll('.fab-item').forEach(button => {
+		button.addEventListener('click', e => {
+			const action = e.currentTarget.dataset.action
+			handleFabAction(action)
+			toggleFabMenu()
+		})
+	})
+}    
 
-			if (identifierType === 'reg') {
-				elements.identifierInput.setCustomValidity(
-					/^[0-9]{4}\s?[A-Z]{2}-[1-7]$/.test(identifier)
-						? ''
-						: 'Неверный формат номера'
-				)
-			} else {
-				elements.identifierInput.setCustomValidity(
-					/^[A-Z0-9]{4}$/.test(identifier) ? '' : 'Нужно 4 заглавных символа'
-				)
-			}
-		}
+function validateIdentifier() {
+	const identifierType = document.getElementById('identifier-type').value
+	const identifier = elements.identifierInput.value.trim().toUpperCase()
 
-		function validateHours() {
-			const hours = parseFloat(elements.hoursInput.value)
-			elements.hoursInput.setCustomValidity(
-				hours >= 0.1 && hours <= 24 ? '' : 'Введите значение от 0.1 до 24'
-			)
-		}
-    
-    // Обработчики для FAB меню
-    document.querySelectorAll('.fab-item').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const action = e.currentTarget.dataset.action;
-            handleFabAction(action);
-            toggleFabMenu();
-        });
-    });
+	let isValid = false
+
+	if (identifierType === 'reg') {
+		isValid = /^[0-9]{4}\s?[A-Z]{2}-[1-7]$/.test(identifier)
+		elements.identifierInput.setCustomValidity(
+			isValid ? '' : 'Формат: 1234 AB-1'
+		)
+	} else {
+		isValid = /^[A-Z0-9]{4}$/.test(identifier)
+		elements.identifierInput.setCustomValidity(
+			isValid ? '' : '4 заглавных символа'
+		)
+	}
+
+	// Принудительное обновление состояния валидации
+	elements.identifierInput.reportValidity()
 }
+
+function validateHours() {
+	const hours = parseFloat(elements.hoursInput.value)
+	const isValid = !isNaN(hours) && hours >= 0.1 && hours <= 24
+
+	elements.hoursInput.setCustomValidity(isValid ? '' : 'Диапазон: 0.1-24')
+	elements.hoursInput.reportValidity()
+}
+
 
 function handleFabAction(action) {
     switch(action) {
@@ -122,6 +129,11 @@ function handleFormSubmit(e) {
 	// Валидация для Беларуси
 	let isValidIdentifier = false
 	let errorMessage = ''
+	// Проверка HTML5 валидации
+	if (!elements.carForm.checkValidity()) {
+		elements.carForm.reportValidity()
+		return
+	}
 
 	if (identifierType === 'reg') {
 		// Проверка гос. номера РБ (примеры: 1234 AB-1, 5678 CE-7, 9999 XX-2)
