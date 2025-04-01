@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Учёт автомобилей</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="app-header">
+    <div class="header-content">
+        <h1>Учёт автомобилей</h1>
+    </div>
+</header>
+
+<div class="container">
+    <!-- Блок статистики -->
+    <div class="stats">
+        <div class="stat-item">
+            <span>Авто сегодня:</span>
+            <span id="total-cars">0</span>
+        </div>
+        <div class="stat-item">
+            <span>Часы сегодня:</span>
+            <span id="total-hours">0.0</span>
+        </div>
+    </div>
+
+    <form id="car-form">
+        <label>
+            Тип идентификатора:
+            <select id="identifier-type">
+                <option value="reg">Гос. номер (формат: 1234 AB-1)</option>
+                <option value="vin">VIN (последние 4 символа)</option>
+            </select>
+        </label>
+
+        <label for="identifier-input">Введите идентификатор:</label>
+        <input type="text" id="identifier-input" placeholder="Введите номер или VIN" required>
+
+        <label for="hours">Нормо-часы:</label>
+        <input type="number" id="hours" min="0" step="0.1" placeholder="Введите количество норма-часов" required>
+
+        <button type="submit">Добавить запись</button>
+    </form>
+
+    <div id="table-container" class="hidden">
+        <h2>Список автомобилей</h2>
+        <table id="car-table">
+            <thead>
+                <tr>
+                    <th>Идентификатор</th>
+                    <th>Дата</th>
+                    <th>Часы</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div id="saved-hours-container" class="hidden">
+        <h2>История дней</h2>
+        <table id="saved-hours-table">
+            <thead>
+                <tr>
+                    <th>Дата</th>
+                    <th>Авто</th>
+                    <th>Часы</th>
+                </tr>
+            </thead>
+            <tbody id="saved-hours-table-body"></tbody>
+        </table>
+    </div>
+
+    <div class="fab-container">
+        <button class="fab-main" onclick="toggleFabMenu()" aria-label="Главное меню">
+            <svg class="icon-menu" width="24" height="24" viewBox="0 0 24 24">
+                <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+            </svg>
+            <svg class="icon-close" width="24" height="24" viewBox="0 0 24 24">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+            </svg>
+        </button>
+        
+        <div class="fab-menu hidden">
+            <button class="fab-item" data-action="toggle-table">
+                <svg width="20" height="20" viewBox="0 0 24 24">
+                    <path d="M4 9h16v2H4zm0 4h10v2H4z"/>
+                </svg>
+                Таблица
+            </button>
+            <button class="fab-item" data-action="toggle-history">
+                <svg width="20" height="20" viewBox="0 0 24 24">
+                    <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                </svg>
+                История
+            </button>
+            <button class="fab-item" data-action="export-csv">
+                <svg width="20" height="20" viewBox="0 0 24 24">
+                    <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-3 18c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4zm3-9V3.5L18.5 9H14z"/>
+                </svg>
+                Экспорт CSV
+            </button>
+            <button class="fab-item" data-action="export-json">
+                <svg width="20" height="20" viewBox="0 0 24 24">
+                    <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-2 16c-1.4 0-2.8-.5-3.9-1.3l1.4-1.4c.6.4 1.3.7 2.5.7 1 0 1.6-.3 1.6-.8 0-.4-.5-.7-1.3-1l-1.1-.5c-1.3-.5-2.1-1.4-2.1-2.6 0-1.6 1.4-2.6 3-2.6 1.2 0 2.1.3 2.7.6l-1.3 1.5c-.4-.2-.9-.4-1.4-.4-1 0-1.5.4-1.5.8 0 .4.5.7 1.3 1l1.1.5c1.4.6 2.1 1.5 2.1 2.7 0 1.7-1.3 2.7-3.2 2.7z"/>
+                </svg>
+                Экспорт JSON
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
