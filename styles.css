@@ -18,6 +18,9 @@ body {
     max-width: 800px;
     margin: 0 auto;
     padding: 0 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .app-header h1 {
@@ -26,6 +29,92 @@ body {
     font-size: 1.8rem;
     text-align: center;
     padding: 0.5rem 0;
+}
+
+#auth-container {
+    max-width: 400px;
+    margin: 2rem auto;
+    padding: 1rem;
+}
+
+.auth-form {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.auth-form.hidden {
+    display: none;
+}
+
+.auth-form h2 {
+    margin-top: 0;
+    color: #1a73e8;
+    text-align: center;
+}
+
+.auth-form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.auth-form input {
+    width: 100%;
+    padding: 0.8rem;
+    margin-bottom: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.auth-form button {
+    width: 100%;
+    padding: 1rem;
+    background: #1a73e8;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.auth-form button:hover {
+    background: #1557b0;
+}
+
+.auth-form p {
+    text-align: center;
+    margin-top: 1rem;
+}
+
+.auth-form a {
+    color: #1a73e8;
+    text-decoration: none;
+}
+
+.auth-form a:hover {
+    text-decoration: underline;
+}
+
+.logout-btn {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.logout-btn:hover {
+    background: #bd2130;
+}
+
+.logout-btn.hidden {
+    display: none;
 }
 
 .container {
@@ -303,6 +392,14 @@ button.delete:hover {
     .fab-item {
         padding: 0.7rem 1.2rem;
         font-size: 0.9rem;
+    }
+
+    #auth-container {
+        padding: 0.5rem;
+    }
+
+    .auth-form {
+        padding: 1rem;
     }
 }
 
