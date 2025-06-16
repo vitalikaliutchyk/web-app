@@ -7,64 +7,201 @@ const elements = {
     totalCars: document.getElementById('total-cars'),
     totalHours: document.getElementById('total-hours'),
     tableContainer: document.getElementById('table-container'),
-    savedHoursContainer: document.getElementById('saved-hours-container')
+    savedHoursContainer: document.getElementById('saved-hours-container'),
+    authContainer: document.getElementById('auth-container'),
+    loginForm: document.getElementById('loginForm'),
+    registerForm: document.getElementById('registerForm'),
+    loginContainer: document.getElementById('login-form'),
+    registerContainer: document.getElementById('register-form'),
+    appContent: document.getElementById('app-content'),
+    logoutBtn: document.getElementById('logout-btn'),
+    showRegisterBtn: document.getElementById('show-register'),
+    showLoginBtn: document.getElementById('show-login')
 };
 
-let carDatabase = JSON.parse(localStorage.getItem('carDatabase')) || [];
+let carDatabase = [];
+let currentUser = null;
+const users = JSON.parse(localStorage.getItem('users')) || [];
 
 function init() {
-    renderAll();
     bindEvents();
     checkMobile();
+    checkAuthState();
 }
 
 function bindEvents() {
-	elements.carForm.addEventListener('submit', handleFormSubmit)
-	elements.identifierInput.addEventListener('input', validateIdentifier)
-	elements.hoursInput.addEventListener('input', validateHours)
-	document.addEventListener('click', handleTableActions)
-	window.addEventListener('resize', checkMobile)
+    // Форма автомобиля
+    elements.carForm.addEventListener('submit', handleFormSubmit);
+    elements.identifierInput.addEventListener('input', validateIdentifier);
+    elements.hoursInput.addEventListener('input', validateHours);
+    document.addEventListener('click', handleTableActions);
+    window.addEventListener('resize', checkMobile);
 
-	// Обработчики для FAB меню
-	document.querySelectorAll('.fab-item').forEach(button => {
-		button.addEventListener('click', e => {
-			const action = e.currentTarget.dataset.action
-			handleFabAction(action)
-			toggleFabMenu()
-		})
-	})
+    // Формы авторизации
+    elements.loginForm.addEventListener('submit', handleLogin);
+    elements.registerForm.addEventListener('submit', handleRegister);
+    elements.showRegisterBtn.addEventListener('click', showRegister);
+    elements.showLoginBtn.addEventListener('click', showLogin);
+    elements.logoutBtn.addEventListener('click', logout);
+
+    // FAB меню
+    document.querySelectorAll('.fab-item').forEach(button => {
+        button.addEventListener('click', e => {
+            const action = e.currentTarget.dataset.action;
+            handleFabAction(action);
+            toggleFabMenu();
+        });
+    });
 }    
 
+function checkAuthState() {
+    const savedUser = localStorage.getItem('currentUser');
+    if (savedUser) {
+        currentUser = savedUser;
+        loadUserData();
+        showApp();
+    } else {
+        showAuth();
+    }
+}
+
+function loadUserData() {
+    const userData = localStorage.getItem(`carDatabase_${currentUser}`);
+    carDatabase = userData ? JSON.parse(userData) : [];
+    renderAll();
+}
+
+function saveUserData() {
+    localStorage.setItem(`carDatabase_${currentUser}`, JSON.stringify(carDatabase));
+}
+
+function showApp() {
+    elements.authContainer.classList.add('hidden');
+    elements.appContent.classList.remove('hidden');
+    elements.logoutBtn.classList.remove('hidden');
+    renderAll();
+}
+
+function showAuth() {
+    elements.authContainer.classList.remove('hidden');
+    elements.appContent.classList.add('hidden');
+    elements.logoutBtn.classList.add('hidden');
+    showLogin();
+}
+
+function showLogin() {
+    elements.registerContainer.classList.add('hidden');
+    elements.loginContainer.classList.remove('hidden');
+}
+
+function showRegister() {
+    elements.loginContainer.classList.add('hidden');
+    elements.registerContainer.classList.remove('hidden');
+}
+
+function logout() {
+    saveUserData();
+    localStorage.removeItem('currentUser');
+    currentUser = null;
+    carDatabase = [];
+    showAuth();
+}
+
+function handleLogin(e) {
+    e.preventDefault();
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
+
+    const user = users.find(u => u.username === username && u.password === password);
+    
+    if (user) {
+        currentUser = username;
+        localStorage.setItem('currentUser', username);
+        loadUserData();
+        showApp();
+    } else {
+        showValidationMessage('Неверное имя пользователя или пароль', false);
+    }
+}
+
+function handleRegister(e) {
+    e.preventDefault();
+    const username = document.getElementById('register-username').value.trim();
+    const password = document.getElementById('register-password').value;
+    const confirmPassword = document.getElementById('register-confirm').value;
+
+    if (password !== confirmPassword) {
+        showValidationMessage('Пароли не совпадают', false);
+        return;
+    }
+
+    if (users.some(u => u.username === username)) {
+        showValidationMessage('Пользователь с таким именем уже существует', false);
+        return;
+    }
+
+    users.push({ username, password });
+    localStorage.setItem('users', JSON.stringify(users));
+    
+    currentUser = username;
+    localStorage.setItem('currentUser', username);
+    carDatabase = [];
+    saveUserData();
+    showApp();
+    
+    showValidationMessage('Регистрация прошла успешно!', true);
+}
+
+function showValidationMessage(message, isSuccess) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = isSuccess ? 'success-message' : 'error-message';
+    messageDiv.textContent = message;
+    messageDiv.style.position = 'fixed';
+    messageDiv.style.top = '20px';
+    messageDiv.style.left = '50%';
+    messageDiv.style.transform = 'translateX(-50%)';
+    messageDiv.style.padding = '10px 20px';
+    messageDiv.style.borderRadius = '5px';
+    messageDiv.style.zIndex = '10000';
+    messageDiv.style.backgroundColor = isSuccess ? '#4CAF50' : '#f44336';
+    messageDiv.style.color = 'white';
+    messageDiv.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+    
+    document.body.appendChild(messageDiv);
+    
+    setTimeout(() => {
+        document.body.removeChild(messageDiv);
+    }, 3000);
+}
+
 function validateIdentifier() {
-	const identifierType = document.getElementById('identifier-type').value
-	const identifier = elements.identifierInput.value.trim().toUpperCase()
+    const identifierType = document.getElementById('identifier-type').value;
+    const identifier = elements.identifierInput.value.trim().toUpperCase();
 
-	let isValid = false
+    let isValid = false;
 
-	if (identifierType === 'reg') {
-		isValid = /^[0-9]{4}\s?[A-Z]{2}-[1-7]$/.test(identifier)
-		elements.identifierInput.setCustomValidity(
-			isValid ? '' : 'Формат: 1234 AB-1'
-		)
-	} else {
-		isValid = /^[A-Z0-9]{4}$/.test(identifier)
-		elements.identifierInput.setCustomValidity(
-			isValid ? '' : '4 заглавных символа'
-		)
-	}
+    if (identifierType === 'reg') {
+        isValid = /^[0-9]{4}\s?[A-Z]{2}-[1-7]$/.test(identifier);
+        elements.identifierInput.setCustomValidity(
+            isValid ? '' : 'Формат: 1234 AB-1'
+        );
+    } else {
+        isValid = /^[A-Z0-9]{4}$/.test(identifier);
+        elements.identifierInput.setCustomValidity(
+            isValid ? '' : '4 заглавных символа'
+        );
+    }
 
-	// Принудительное обновление состояния валидации
-	elements.identifierInput.reportValidity()
+    elements.identifierInput.reportValidity();
 }
 
 function validateHours() {
-	const hours = parseFloat(elements.hoursInput.value)
-	const isValid = !isNaN(hours) && hours >= 0.1 && hours <= 24
+    const hours = parseFloat(elements.hoursInput.value);
+    const isValid = !isNaN(hours) && hours >= 0.1 && hours <= 24;
 
-	elements.hoursInput.setCustomValidity(isValid ? '' : 'Диапазон: 0.1-24')
-	elements.hoursInput.reportValidity()
+    elements.hoursInput.setCustomValidity(isValid ? '' : 'Диапазон: 0.1-24');
+    elements.hoursInput.reportValidity();
 }
-
 
 function handleFabAction(action) {
     switch(action) {
@@ -100,7 +237,7 @@ function getCurrentDate() {
 }
 
 function saveData() {
-    localStorage.setItem('carDatabase', JSON.stringify(carDatabase));
+    saveUserData();
 }
 
 function updateStats() {
@@ -121,55 +258,51 @@ function updateStats() {
 }
 
 function handleFormSubmit(e) {
-	e.preventDefault()
-	const identifierType = document.getElementById('identifier-type').value
-	const identifier = elements.identifierInput.value.trim().toUpperCase()
-	const hours = parseFloat(elements.hoursInput.value)
+    e.preventDefault();
+    const identifierType = document.getElementById('identifier-type').value;
+    const identifier = elements.identifierInput.value.trim().toUpperCase();
+    const hours = parseFloat(elements.hoursInput.value);
 
-	// Валидация для Беларуси
-	let isValidIdentifier = false
-	let errorMessage = ''
-	// Проверка HTML5 валидации
-	if (!elements.carForm.checkValidity()) {
-		elements.carForm.reportValidity()
-		return
-	}
+    if (!elements.carForm.checkValidity()) {
+        elements.carForm.reportValidity();
+        return;
+    }
 
-	if (identifierType === 'reg') {
-		// Проверка гос. номера РБ (примеры: 1234 AB-1, 5678 CE-7, 9999 XX-2)
-		const regEx = /^[0-9]{4}\s?[A-Z]{2}-[1-7]$/
-		isValidIdentifier = regEx.test(identifier)
-		errorMessage = 'Неверный формат гос. номера (Пример: 1234 AB-1)'
-	} else {
-		// Проверка последних 4 символов VIN (буквы и цифры)
-		isValidIdentifier =
-			identifier.length === 4 && /^[A-Z0-9]{4}$/.test(identifier)
-		errorMessage = 'ВИН должен содержать 4 заглавных символа (буквы или цифры)'
-	}
+    let isValidIdentifier = false;
+    let errorMessage = '';
 
-	// Валидация часов (0.1 - 24)
-	const isValidHours = !isNaN(hours) && hours >= 0.1 && hours <= 24
+    if (identifierType === 'reg') {
+        const regEx = /^[0-9]{4}\s?[A-Z]{2}-[1-7]$/;
+        isValidIdentifier = regEx.test(identifier);
+        errorMessage = 'Неверный формат гос. номера (Пример: 1234 AB-1)';
+    } else {
+        isValidIdentifier =
+            identifier.length === 4 && /^[A-Z0-9]{4}$/.test(identifier);
+        errorMessage = 'ВИН должен содержать 4 заглавных символа (буквы или цифры)';
+    }
 
-	if (isValidIdentifier && isValidHours) {
-		const date = getCurrentDate()
-		let car = carDatabase.find(c => c.identifier === identifier)
+    const isValidHours = !isNaN(hours) && hours >= 0.1 && hours <= 24;
 
-		if (!car) {
-			car = { identifier, records: [] }
-			carDatabase.push(car)
-		}
+    if (isValidIdentifier && isValidHours) {
+        const date = getCurrentDate();
+        let car = carDatabase.find(c => c.identifier === identifier);
 
-		car.records.push({ date, hours })
-		saveData()
-		renderAll()
-		elements.carForm.reset()
-		showValidationMessage('Данные успешно добавлены!', true)
-	} else {
-		let errors = []
-		if (!isValidIdentifier) errors.push(errorMessage)
-		if (!isValidHours) errors.push('Часы должны быть от 0.1 до 24')
-		showValidationMessage(errors.join('<br>'), false)
-	}
+        if (!car) {
+            car = { identifier, records: [] };
+            carDatabase.push(car);
+        }
+
+        car.records.push({ date, hours });
+        saveData();
+        renderAll();
+        elements.carForm.reset();
+        showValidationMessage('Данные успешно добавлены!', true);
+    } else {
+        let errors = [];
+        if (!isValidIdentifier) errors.push(errorMessage);
+        if (!isValidHours) errors.push('Часы должны быть от 0.1 до 24');
+        showValidationMessage(errors.join('<br>'), false);
+    }
 }
 
 function handleTableActions(e) {
