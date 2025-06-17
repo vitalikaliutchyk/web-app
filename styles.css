@@ -33,13 +33,13 @@ body {
 
 #auth-container {
     max-width: 400px;
-    margin: 2rem auto;
+    margin: 5rem auto;
     padding: 1rem;
 }
 
 .auth-form {
-    background: #fff;
-    padding: 1.5rem;
+    background: #ffffff;
+    padding: 0.5rem;
     border-radius: 12px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
@@ -61,10 +61,10 @@ body {
 }
 
 .auth-form input {
-    width: 100%;
+    width: 92%;
     padding: 0.8rem;
     margin-bottom: 1rem;
-    border: 1px solid #ddd;
+    border: 1px solid #ffffff;
     border-radius: 8px;
     font-size: 1rem;
 }
@@ -72,7 +72,7 @@ body {
 .auth-form button {
     width: 100%;
     padding: 1rem;
-    background: #1a73e8;
+    background: #248cf5;
     color: white;
     border: none;
     border-radius: 8px;
@@ -82,7 +82,7 @@ body {
 }
 
 .auth-form button:hover {
-    background: #1557b0;
+    background: #0a64d3;
 }
 
 .auth-form p {
@@ -118,7 +118,7 @@ body {
 }
 
 .container {
-    max-width: 800px;
+    max-width: 100vh;
     margin: 0 auto;
     padding: 1rem;
 }
@@ -400,6 +400,7 @@ button.delete:hover {
 
     .auth-form {
         padding: 1rem;
+    
     }
 }
 
