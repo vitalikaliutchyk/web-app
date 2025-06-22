@@ -19,32 +19,65 @@ const elements = {
     showLoginBtn: document.getElementById('show-login')
 };
 
-let carDatabase = [];
 let currentUser = null;
-const users = JSON.parse(localStorage.getItem('users')) || [];
+let db = null;
+
+// Инициализация IndexedDB
+function initDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('CarRepairDB', 2);
+        
+        request.onerror = (event) => {
+            console.error('Database error:', event.target.error);
+            reject(event.target.error);
+        };
+
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            
+            if (!db.objectStoreNames.contains('users')) {
+                const usersStore = db.createObjectStore('users', { keyPath: 'username' });
+                usersStore.createIndex('username', 'username', { unique: true });
+            }
+            
+            if (!db.objectStoreNames.contains('repairs')) {
+                const repairsStore = db.createObjectStore('repairs', { keyPath: 'id', autoIncrement: true });
+                repairsStore.createIndex('username', 'username', { unique: false });
+                repairsStore.createIndex('date', 'date', { unique: false });
+            }
+        };
+
+        request.onsuccess = (event) => {
+            db = event.target.result;
+            resolve();
+        };
+    });
+}
 
 function init() {
-    bindEvents();
-    checkMobile();
-    checkAuthState();
+    initDB().then(() => {
+        bindEvents();
+        checkMobile();
+        checkAuthState();
+    }).catch(error => {
+        console.error('DB initialization failed:', error);
+        alert('Ошибка инициализации базы данных');
+    });
 }
 
 function bindEvents() {
-    // Форма автомобиля
     elements.carForm.addEventListener('submit', handleFormSubmit);
     elements.identifierInput.addEventListener('input', validateIdentifier);
     elements.hoursInput.addEventListener('input', validateHours);
     document.addEventListener('click', handleTableActions);
     window.addEventListener('resize', checkMobile);
 
-    // Формы авторизации
     elements.loginForm.addEventListener('submit', handleLogin);
     elements.registerForm.addEventListener('submit', handleRegister);
     elements.showRegisterBtn.addEventListener('click', showRegister);
     elements.showLoginBtn.addEventListener('click', showLogin);
     elements.logoutBtn.addEventListener('click', logout);
 
-    // FAB меню
     document.querySelectorAll('.fab-item').forEach(button => {
         button.addEventListener('click', e => {
             const action = e.currentTarget.dataset.action;
@@ -52,34 +85,23 @@ function bindEvents() {
             toggleFabMenu();
         });
     });
-}    
+}
 
 function checkAuthState() {
-    const savedUser = localStorage.getItem('currentUser');
+    const savedUser = sessionStorage.getItem('currentUser');
     if (savedUser) {
         currentUser = savedUser;
-        loadUserData();
         showApp();
+        renderAll();
     } else {
         showAuth();
     }
-}
-
-function loadUserData() {
-    const userData = localStorage.getItem(`carDatabase_${currentUser}`);
-    carDatabase = userData ? JSON.parse(userData) : [];
-    renderAll();
-}
-
-function saveUserData() {
-    localStorage.setItem(`carDatabase_${currentUser}`, JSON.stringify(carDatabase));
 }
 
 function showApp() {
     elements.authContainer.classList.add('hidden');
     elements.appContent.classList.remove('hidden');
     elements.logoutBtn.classList.remove('hidden');
-    renderAll();
 }
 
 function showAuth() {
@@ -100,10 +122,8 @@ function showRegister() {
 }
 
 function logout() {
-    saveUserData();
-    localStorage.removeItem('currentUser');
+    sessionStorage.removeItem('currentUser');
     currentUser = null;
-    carDatabase = [];
     showAuth();
 }
 
@@ -112,16 +132,27 @@ function handleLogin(e) {
     const username = document.getElementById('login-username').value.trim();
     const password = document.getElementById('login-password').value;
 
-    const user = users.find(u => u.username === username && u.password === password);
-    
-    if (user) {
-        currentUser = username;
-        localStorage.setItem('currentUser', username);
-        loadUserData();
-        showApp();
-    } else {
-        showValidationMessage('Неверное имя пользователя или пароль', false);
-    }
+    const transaction = db.transaction(['users'], 'readonly');
+    const store = transaction.objectStore('users');
+    const request = store.get(username);
+
+    request.onsuccess = (event) => {
+        const user = event.target.result;
+        
+        if (user && user.password === password) {
+            currentUser = username;
+            sessionStorage.setItem('currentUser', username);
+            showApp();
+            renderAll();
+        } else {
+            showValidationMessage('Неверное имя пользователя или пароль', false);
+        }
+    };
+
+    request.onerror = (event) => {
+        console.error('Login error:', event.target.error);
+        showValidationMessage('Ошибка при входе', false);
+    };
 }
 
 function handleRegister(e) {
@@ -135,21 +166,26 @@ function handleRegister(e) {
         return;
     }
 
-    if (users.some(u => u.username === username)) {
-        showValidationMessage('Пользователь с таким именем уже существует', false);
-        return;
-    }
+    const transaction = db.transaction(['users'], 'readwrite');
+    const store = transaction.objectStore('users');
+    const request = store.add({ username, password });
 
-    users.push({ username, password });
-    localStorage.setItem('users', JSON.stringify(users));
-    
-    currentUser = username;
-    localStorage.setItem('currentUser', username);
-    carDatabase = [];
-    saveUserData();
-    showApp();
-    
-    showValidationMessage('Регистрация прошла успешно!', true);
+    request.onsuccess = () => {
+        currentUser = username;
+        sessionStorage.setItem('currentUser', username);
+        showApp();
+        renderAll();
+        showValidationMessage('Регистрация прошла успешно!', true);
+    };
+
+    request.onerror = (event) => {
+        if (event.target.error.name === 'ConstraintError') {
+            showValidationMessage('Пользователь с таким именем уже существует', false);
+        } else {
+            console.error('Registration error:', event.target.error);
+            showValidationMessage('Ошибка при регистрации', false);
+        }
+    };
 }
 
 function showValidationMessage(message, isSuccess) {
@@ -236,27 +272,6 @@ function getCurrentDate() {
         .padStart(2, '0')}.${d.getFullYear()}`;
 }
 
-function saveData() {
-    saveUserData();
-}
-
-function updateStats() {
-    const today = getCurrentDate();
-    let total = { cars: 0, hours: 0 };
-
-    carDatabase.forEach(car => {
-        car.records.forEach(record => {
-            if (record.date === today) {
-                total.cars++;
-                total.hours += record.hours;
-            }
-        });
-    });
-
-    elements.totalCars.textContent = total.cars;
-    elements.totalHours.textContent = total.hours.toFixed(1);
-}
-
 function handleFormSubmit(e) {
     e.preventDefault();
     const identifierType = document.getElementById('identifier-type').value;
@@ -285,18 +300,27 @@ function handleFormSubmit(e) {
 
     if (isValidIdentifier && isValidHours) {
         const date = getCurrentDate();
-        let car = carDatabase.find(c => c.identifier === identifier);
+        
+        const transaction = db.transaction(['repairs'], 'readwrite');
+        const store = transaction.objectStore('repairs');
+        
+        store.add({
+            username: currentUser,
+            identifier,
+            date,
+            hours
+        });
 
-        if (!car) {
-            car = { identifier, records: [] };
-            carDatabase.push(car);
-        }
+        transaction.oncomplete = () => {
+            renderAll();
+            elements.carForm.reset();
+            showValidationMessage('Данные успешно добавлены!', true);
+        };
 
-        car.records.push({ date, hours });
-        saveData();
-        renderAll();
-        elements.carForm.reset();
-        showValidationMessage('Данные успешно добавлены!', true);
+        transaction.onerror = (event) => {
+            console.error('Add repair error:', event.target.error);
+            showValidationMessage('Ошибка при добавлении данных', false);
+        };
     } else {
         let errors = [];
         if (!isValidIdentifier) errors.push(errorMessage);
@@ -314,29 +338,48 @@ function handleTableActions(e) {
 }
 
 function handleDelete(e) {
-    const index = e.target.dataset.index;
-    const recordIndex = e.target.dataset.record;
+    const id = parseInt(e.target.dataset.id);
+    
+    const transaction = db.transaction(['repairs'], 'readwrite');
+    const store = transaction.objectStore('repairs');
+    store.delete(id);
 
-    carDatabase[index].records.splice(recordIndex, 1);
-    if (carDatabase[index].records.length === 0) {
-        carDatabase.splice(index, 1);
-    }
-    saveData();
-    renderAll();
+    transaction.oncomplete = () => {
+        renderAll();
+    };
+
+    transaction.onerror = (event) => {
+        console.error('Delete error:', event.target.error);
+        showValidationMessage('Ошибка при удалении записи', false);
+    };
 }
 
 function handleEdit(e) {
-    const index = e.target.dataset.index;
-    const recordIndex = e.target.dataset.record;
-    const currentHours = carDatabase[index].records[recordIndex].hours;
-    const newHours = parseFloat(
-        prompt('Введите новые часы:', currentHours)
-    );
+    const id = parseInt(e.target.dataset.id);
+    const currentHours = parseFloat(e.target.dataset.hours);
+    const newHours = parseFloat(prompt('Введите новые часы:', currentHours));
 
     if (!isNaN(newHours)) {
-        carDatabase[index].records[recordIndex].hours = newHours;
-        saveData();
-        renderAll();
+        const transaction = db.transaction(['repairs'], 'readwrite');
+        const store = transaction.objectStore('repairs');
+        const request = store.get(id);
+
+        request.onsuccess = (event) => {
+            const record = event.target.result;
+            if (record) {
+                record.hours = newHours;
+                store.put(record);
+            }
+        };
+
+        transaction.oncomplete = () => {
+            renderAll();
+        };
+
+        transaction.onerror = (event) => {
+            console.error('Edit error:', event.target.error);
+            showValidationMessage('Ошибка при редактировании записи', false);
+        };
     }
 }
 
@@ -346,95 +389,130 @@ function renderAll() {
     updateStats();
 }
 
+function getRepairs() {
+    return new Promise((resolve, reject) => {
+        if (!db) {
+            reject('Database not initialized');
+            return;
+        }
+
+        const transaction = db.transaction(['repairs'], 'readonly');
+        const store = transaction.objectStore('repairs');
+        const index = store.index('username');
+        const request = index.getAll(currentUser);
+
+        request.onsuccess = (event) => {
+            resolve(event.target.result || []);
+        };
+
+        request.onerror = (event) => {
+            reject(event.target.error);
+        };
+    });
+}
+
 function renderCarTable() {
-    elements.carTableBody.innerHTML = carDatabase
-        .flatMap((car, index) =>
-            car.records.map((record, recordIndex) => `
+    getRepairs().then(repairs => {
+        elements.carTableBody.innerHTML = repairs
+            .map(repair => `
                 <tr>
-                    <td>${car.identifier}</td>
-                    <td>${record.date}</td>
-                    <td>${record.hours.toFixed(1)}</td>
+                    <td>${repair.identifier}</td>
+                    <td>${repair.date}</td>
+                    <td>${repair.hours.toFixed(1)}</td>
                     <td>
                         <button class="edit" 
-                                data-index="${index}" 
-                                data-record="${recordIndex}">
+                                data-id="${repair.id}"
+                                data-hours="${repair.hours}">
                             ✎
                         </button>
                         <button class="delete" 
-                                data-index="${index}" 
-                                data-record="${recordIndex}">
+                                data-id="${repair.id}">
                             🗑
                         </button>
                     </td>
                 </tr>
             `)
-        )
-        .join('');
+            .join('');
+    }).catch(error => {
+        console.error('Render table error:', error);
+    });
 }
 
 function renderSavedHoursTable() {
-    const daysMap = carDatabase
-        .flatMap(car => car.records)
-        .reduce((acc, record) => {
-            acc[record.date] = acc[record.date] || { cars: 0, hours: 0 };
-            acc[record.date].cars++;
-            acc[record.date].hours += record.hours;
+    getRepairs().then(repairs => {
+        const daysMap = repairs.reduce((acc, repair) => {
+            acc[repair.date] = acc[repair.date] || { cars: 0, hours: 0 };
+            acc[repair.date].cars++;
+            acc[repair.date].hours += repair.hours;
             return acc;
         }, {});
 
-    const sortedDays = Object.entries(daysMap)
-        .map(([date, data]) => ({ date, ...data }))
-        .sort((a, b) => {
-            const [dA, mA, yA] = a.date.split('.');
-            const [dB, mB, yB] = b.date.split('.');
-            return new Date(yB, mB-1, dB) - new Date(yA, mA-1, dA);
-        });
+        const sortedDays = Object.entries(daysMap)
+            .map(([date, data]) => ({ date, ...data }))
+            .sort((a, b) => {
+                const [dA, mA, yA] = a.date.split('.');
+                const [dB, mB, yB] = b.date.split('.');
+                return new Date(yB, mB-1, dB) - new Date(yA, mA-1, dA);
+            });
 
-    elements.savedHoursTableBody.innerHTML = sortedDays
-        .map(day => `
-            <tr>
-                <td>${day.date}</td>
-                <td>${day.cars}</td>
-                <td>${day.hours.toFixed(1)}</td>
-            </tr>
-        `).join('');
+        elements.savedHoursTableBody.innerHTML = sortedDays
+            .map(day => `
+                <tr>
+                    <td>${day.date}</td>
+                    <td>${day.cars}</td>
+                    <td>${day.hours.toFixed(1)}</td>
+                </tr>
+            `).join('');
+    }).catch(error => {
+        console.error('Render history error:', error);
+    });
 }
 
-function getAllRepairsData() {
-    return carDatabase
-        .flatMap(car => car.records.map(record => ({
-            date: record.date,
-            identifier: car.identifier,
-            hours: record.hours
-        })))
-        .sort((a, b) => {
-            const [dA, mA, yA] = a.date.split('.');
-            const [dB, mB, yB] = b.date.split('.');
-            return new Date(yB, mB-1, dB) - new Date(yA, mA-1, dA);
-        });
+function updateStats() {
+    getRepairs().then(repairs => {
+        const today = getCurrentDate();
+        const todayRepairs = repairs.filter(repair => repair.date === today);
+        
+        const totalCars = todayRepairs.length;
+        const totalHours = todayRepairs.reduce((sum, repair) => sum + repair.hours, 0);
+        
+        elements.totalCars.textContent = totalCars;
+        elements.totalHours.textContent = totalHours.toFixed(1);
+    }).catch(error => {
+        console.error('Update stats error:', error);
+    });
 }
 
 function exportFullHistory(format) {
-    const data = getAllRepairsData();
-    const today = new Date().toISOString().slice(0, 10);
+    getRepairs().then(repairs => {
+        const today = new Date().toISOString().slice(0, 10);
+        const data = repairs.map(repair => ({
+            date: repair.date,
+            identifier: repair.identifier,
+            hours: repair.hours
+        }));
 
-    if (format === 'csv') {
-        const csvContent = [
-            'Дата;Идентификатор;Часы',
-            ...data.map(item => `${item.date};${item.identifier};${item.hours.toFixed(1)}`)
-        ].join('\n');
+        if (format === 'csv') {
+            const csvContent = [
+                'Дата;Идентификатор;Часы',
+                ...data.map(item => `${item.date};${item.identifier};${item.hours.toFixed(1)}`)
+            ].join('\n');
 
-        const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8' });
-        downloadFile(blob, `история_ремонтов_${today}.csv`);
-    } else {
-        const jsonData = {
-            generated: new Date().toISOString(),
-            totalRecords: data.length,
-            repairs: data
-        };
-        const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
-        downloadFile(blob, `история_ремонтов_${today}.json`);
-    }
+            const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8' });
+            downloadFile(blob, `история_ремонтов_${today}.csv`);
+        } else {
+            const jsonData = {
+                generated: new Date().toISOString(),
+                totalRecords: data.length,
+                repairs: data
+            };
+            const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
+            downloadFile(blob, `история_ремонтов_${today}.json`);
+        }
+    }).catch(error => {
+        console.error('Export error:', error);
+        showValidationMessage('Ошибка при экспорте данных', false);
+    });
 }
 
 function downloadFile(blob, filename) {
