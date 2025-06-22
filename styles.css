@@ -31,6 +31,27 @@ body {
     padding: 0.5rem 0;
 }
 
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+#user-email {
+    font-size: 0.9rem;
+    color: #666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+@media (max-width: 768px) {
+    #user-email {
+        max-width: 120px;
+    }
+}
+
 #auth-container {
     max-width: 400px;
     margin: 5rem auto;
@@ -111,10 +132,6 @@ body {
 
 .logout-btn:hover {
     background: #bd2130;
-}
-
-.logout-btn.hidden {
-    display: none;
 }
 
 .container {

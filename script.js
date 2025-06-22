@@ -16,7 +16,9 @@ const elements = {
     appContent: document.getElementById('app-content'),
     logoutBtn: document.getElementById('logout-btn'),
     showRegisterBtn: document.getElementById('show-register'),
-    showLoginBtn: document.getElementById('show-login')
+    showLoginBtn: document.getElementById('show-login'),
+    userInfo: document.getElementById('user-info'),
+    userEmail: document.getElementById('user-email')
 };
 
 // Firebase конфигурация (ЗАМЕНИТЕ НА ВАШУ)
@@ -110,14 +112,16 @@ function setupRealtimeUpdates() {
 function showApp() {
     elements.authContainer.classList.add('hidden');
     elements.appContent.classList.remove('hidden');
-    elements.logoutBtn.classList.remove('hidden');
+    elements.userInfo.classList.remove('hidden');
+    elements.userEmail.textContent = currentUser.email;
     renderAll();
 }
 
 function showAuth() {
     elements.authContainer.classList.remove('hidden');
     elements.appContent.classList.add('hidden');
-    elements.logoutBtn.classList.add('hidden');
+    elements.userInfo.classList.add('hidden');
+    elements.userEmail.textContent = '';
     showLogin();
 }
 
