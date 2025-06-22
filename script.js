@@ -20,7 +20,14 @@ const elements = {
 };
 
 // Firebase конфигурация (ЗАМЕНИТЕ НА ВАШУ)
-const firebaseConfig = FIREBASE_API_KEY
+const firebaseConfig = {
+    apiKey: "AIzaSyBlFjb3N6BdiCT9kH94yrh01hVUprn_JzU",
+    authDomain: "carrepairtracker.firebaseapp.com",
+    projectId: "carrepairtracker",
+    storageBucket: "carrepairtracker.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+};
 
 // Инициализация Firebase
 firebase.initializeApp(firebaseConfig);
