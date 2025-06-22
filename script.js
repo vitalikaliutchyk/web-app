@@ -19,50 +19,29 @@ const elements = {
     showLoginBtn: document.getElementById('show-login')
 };
 
+// Firebase конфигурация (ЗАМЕНИТЕ НА ВАШУ)
+const firebaseConfig = {
+    apiKey: "AIzaSyBlFjb3N6BdiCT9kH94yrh01hVUprn_JzU",
+    authDomain: "carrepairtracker.firebaseapp.com",
+    projectId: "carrepairtracker",
+    storageBucket: "carrepairtracker.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+};
+
+// Инициализация Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
 let currentUser = null;
-let db = null;
-
-// Инициализация IndexedDB
-function initDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open('CarRepairDB', 2);
-        
-        request.onerror = (event) => {
-            console.error('Database error:', event.target.error);
-            reject(event.target.error);
-        };
-
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            
-            if (!db.objectStoreNames.contains('users')) {
-                const usersStore = db.createObjectStore('users', { keyPath: 'username' });
-                usersStore.createIndex('username', 'username', { unique: true });
-            }
-            
-            if (!db.objectStoreNames.contains('repairs')) {
-                const repairsStore = db.createObjectStore('repairs', { keyPath: 'id', autoIncrement: true });
-                repairsStore.createIndex('username', 'username', { unique: false });
-                repairsStore.createIndex('date', 'date', { unique: false });
-            }
-        };
-
-        request.onsuccess = (event) => {
-            db = event.target.result;
-            resolve();
-        };
-    });
-}
+let repairsUnsubscribe = null;
+let repairsData = []; // Глобальный массив для хранения данных о ремонтах
 
 function init() {
-    initDB().then(() => {
-        bindEvents();
-        checkMobile();
-        checkAuthState();
-    }).catch(error => {
-        console.error('DB initialization failed:', error);
-        alert('Ошибка инициализации базы данных');
-    });
+    bindEvents();
+    checkMobile();
+    checkAuthState();
 }
 
 function bindEvents() {
@@ -88,20 +67,51 @@ function bindEvents() {
 }
 
 function checkAuthState() {
-    const savedUser = sessionStorage.getItem('currentUser');
-    if (savedUser) {
-        currentUser = savedUser;
-        showApp();
-        renderAll();
-    } else {
-        showAuth();
-    }
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            currentUser = user;
+            showApp();
+            setupRealtimeUpdates();
+        } else {
+            showAuth();
+        }
+    });
+}
+
+function setupRealtimeUpdates() {
+    // Отписываемся от предыдущих обновлений
+    if (repairsUnsubscribe) repairsUnsubscribe();
+    
+    // Подписываемся на обновления для текущего пользователя
+    repairsUnsubscribe = db.collection('repairs')
+        .where('userId', '==', currentUser.uid)
+        .orderBy('timestamp', 'desc')
+        .onSnapshot(snapshot => {
+            repairsData = []; // Очищаем массив перед обновлением
+            
+            snapshot.forEach(doc => {
+                const repair = doc.data();
+                repair.id = doc.id; // Сохраняем ID документа
+                repairsData.push(repair);
+            });
+            
+            // Обновляем интерфейс
+            renderAll();
+        }, error => {
+            console.error('Realtime update error:', error);
+            if (error.code === 'failed-precondition') {
+                showValidationMessage('Требуется создать индекс в Firestore. Проверьте консоль для получения ссылки.', false);
+            } else {
+                showValidationMessage('Ошибка загрузки данных: ' + error.message, false);
+            }
+        });
 }
 
 function showApp() {
     elements.authContainer.classList.add('hidden');
     elements.appContent.classList.remove('hidden');
     elements.logoutBtn.classList.remove('hidden');
+    renderAll();
 }
 
 function showAuth() {
@@ -122,42 +132,48 @@ function showRegister() {
 }
 
 function logout() {
-    sessionStorage.removeItem('currentUser');
-    currentUser = null;
-    showAuth();
+    auth.signOut().then(() => {
+        currentUser = null;
+        repairsData = []; // Очищаем данные
+        if (repairsUnsubscribe) repairsUnsubscribe();
+    }).catch(error => {
+        console.error('Logout error:', error);
+        showValidationMessage('Ошибка при выходе: ' + error.message, false);
+    });
 }
 
 function handleLogin(e) {
     e.preventDefault();
-    const username = document.getElementById('login-username').value.trim();
+    const email = document.getElementById('login-username').value.trim();
     const password = document.getElementById('login-password').value;
 
-    const transaction = db.transaction(['users'], 'readonly');
-    const store = transaction.objectStore('users');
-    const request = store.get(username);
+    // Добавляем домен, если его нет
+    const fullEmail = email.includes('@') ? email : `${email}@carrepair.com`;
 
-    request.onsuccess = (event) => {
-        const user = event.target.result;
-        
-        if (user && user.password === password) {
-            currentUser = username;
-            sessionStorage.setItem('currentUser', username);
-            showApp();
-            renderAll();
-        } else {
-            showValidationMessage('Неверное имя пользователя или пароль', false);
-        }
-    };
-
-    request.onerror = (event) => {
-        console.error('Login error:', event.target.error);
-        showValidationMessage('Ошибка при входе', false);
-    };
+    auth.signInWithEmailAndPassword(fullEmail, password)
+        .then(() => {
+            // Успешный вход обрабатывается в onAuthStateChanged
+        })
+        .catch(error => {
+            let message = 'Ошибка входа';
+            switch (error.code) {
+                case 'auth/user-not-found':
+                    message = 'Пользователь не найден';
+                    break;
+                case 'auth/wrong-password':
+                    message = 'Неверный пароль';
+                    break;
+                case 'auth/invalid-email':
+                    message = 'Неверный формат email';
+                    break;
+            }
+            showValidationMessage(message, false);
+        });
 }
 
 function handleRegister(e) {
     e.preventDefault();
-    const username = document.getElementById('register-username').value.trim();
+    const email = document.getElementById('register-username').value.trim();
     const password = document.getElementById('register-password').value;
     const confirmPassword = document.getElementById('register-confirm').value;
 
@@ -166,29 +182,34 @@ function handleRegister(e) {
         return;
     }
 
-    const transaction = db.transaction(['users'], 'readwrite');
-    const store = transaction.objectStore('users');
-    const request = store.add({ username, password });
+    // Добавляем домен, если его нет
+    const fullEmail = email.includes('@') ? email : `${email}@carrepair.com`;
 
-    request.onsuccess = () => {
-        currentUser = username;
-        sessionStorage.setItem('currentUser', username);
-        showApp();
-        renderAll();
-        showValidationMessage('Регистрация прошла успешно!', true);
-    };
-
-    request.onerror = (event) => {
-        if (event.target.error.name === 'ConstraintError') {
-            showValidationMessage('Пользователь с таким именем уже существует', false);
-        } else {
-            console.error('Registration error:', event.target.error);
-            showValidationMessage('Ошибка при регистрации', false);
-        }
-    };
+    auth.createUserWithEmailAndPassword(fullEmail, password)
+        .then(() => {
+            showValidationMessage('Регистрация прошла успешно!', true);
+        })
+        .catch(error => {
+            let message = 'Ошибка регистрации';
+            switch (error.code) {
+                case 'auth/email-already-in-use':
+                    message = 'Email уже используется';
+                    break;
+                case 'auth/weak-password':
+                    message = 'Слабый пароль (минимум 6 символов)';
+                    break;
+                case 'auth/invalid-email':
+                    message = 'Неверный формат email';
+                    break;
+            }
+            showValidationMessage(message, false);
+        });
 }
 
 function showValidationMessage(message, isSuccess) {
+    // Удаляем предыдущие сообщения
+    document.querySelectorAll('.error-message, .success-message').forEach(el => el.remove());
+    
     const messageDiv = document.createElement('div');
     messageDiv.className = isSuccess ? 'success-message' : 'error-message';
     messageDiv.textContent = message;
@@ -206,7 +227,9 @@ function showValidationMessage(message, isSuccess) {
     document.body.appendChild(messageDiv);
     
     setTimeout(() => {
-        document.body.removeChild(messageDiv);
+        if (messageDiv.parentNode) {
+            document.body.removeChild(messageDiv);
+        }
     }, 3000);
 }
 
@@ -301,26 +324,35 @@ function handleFormSubmit(e) {
     if (isValidIdentifier && isValidHours) {
         const date = getCurrentDate();
         
-        const transaction = db.transaction(['repairs'], 'readwrite');
-        const store = transaction.objectStore('repairs');
+        // Проверка аутентификации
+        if (!currentUser || !currentUser.uid) {
+            showValidationMessage('Ошибка: пользователь не аутентифицирован', false);
+            return;
+        }
         
-        store.add({
-            username: currentUser,
+        db.collection('repairs').add({
+            userId: currentUser.uid,
             identifier,
             date,
-            hours
-        });
-
-        transaction.oncomplete = () => {
-            renderAll();
+            hours,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        })
+        .then(() => {
             elements.carForm.reset();
-            showValidationMessage('Данные успешно добавлены!', true);
-        };
-
-        transaction.onerror = (event) => {
-            console.error('Add repair error:', event.target.error);
-            showValidationMessage('Ошибка при добавлении данных', false);
-        };
+            // Сообщение об успехе покажет onSnapshot после обновления данных
+        })
+        .catch(error => {
+            console.error('Add repair error:', error);
+            
+            let message = 'Ошибка при добавлении данных';
+            if (error.code === 'permission-denied') {
+                message = 'Недостаточно прав. Проверьте правила Firestore.';
+            } else if (error.code === 'failed-precondition') {
+                message = 'Требуется создать индекс. Проверьте консоль.';
+            }
+            
+            showValidationMessage(message, false);
+        });
     } else {
         let errors = [];
         if (!isValidIdentifier) errors.push(errorMessage);
@@ -338,48 +370,28 @@ function handleTableActions(e) {
 }
 
 function handleDelete(e) {
-    const id = parseInt(e.target.dataset.id);
+    const id = e.target.dataset.id;
     
-    const transaction = db.transaction(['repairs'], 'readwrite');
-    const store = transaction.objectStore('repairs');
-    store.delete(id);
-
-    transaction.oncomplete = () => {
-        renderAll();
-    };
-
-    transaction.onerror = (event) => {
-        console.error('Delete error:', event.target.error);
-        showValidationMessage('Ошибка при удалении записи', false);
-    };
+    db.collection('repairs').doc(id).delete()
+        .catch(error => {
+            console.error('Delete error:', error);
+            showValidationMessage('Ошибка при удалении записи: ' + error.message, false);
+        });
 }
 
 function handleEdit(e) {
-    const id = parseInt(e.target.dataset.id);
+    const id = e.target.dataset.id;
     const currentHours = parseFloat(e.target.dataset.hours);
     const newHours = parseFloat(prompt('Введите новые часы:', currentHours));
 
     if (!isNaN(newHours)) {
-        const transaction = db.transaction(['repairs'], 'readwrite');
-        const store = transaction.objectStore('repairs');
-        const request = store.get(id);
-
-        request.onsuccess = (event) => {
-            const record = event.target.result;
-            if (record) {
-                record.hours = newHours;
-                store.put(record);
-            }
-        };
-
-        transaction.oncomplete = () => {
-            renderAll();
-        };
-
-        transaction.onerror = (event) => {
-            console.error('Edit error:', event.target.error);
-            showValidationMessage('Ошибка при редактировании записи', false);
-        };
+        db.collection('repairs').doc(id).update({
+            hours: newHours
+        })
+        .catch(error => {
+            console.error('Edit error:', error);
+            showValidationMessage('Ошибка при редактировании записи: ' + error.message, false);
+        });
     }
 }
 
@@ -389,130 +401,99 @@ function renderAll() {
     updateStats();
 }
 
-function getRepairs() {
-    return new Promise((resolve, reject) => {
-        if (!db) {
-            reject('Database not initialized');
-            return;
-        }
-
-        const transaction = db.transaction(['repairs'], 'readonly');
-        const store = transaction.objectStore('repairs');
-        const index = store.index('username');
-        const request = index.getAll(currentUser);
-
-        request.onsuccess = (event) => {
-            resolve(event.target.result || []);
-        };
-
-        request.onerror = (event) => {
-            reject(event.target.error);
-        };
-    });
-}
-
 function renderCarTable() {
-    getRepairs().then(repairs => {
-        elements.carTableBody.innerHTML = repairs
-            .map(repair => `
-                <tr>
-                    <td>${repair.identifier}</td>
-                    <td>${repair.date}</td>
-                    <td>${repair.hours.toFixed(1)}</td>
-                    <td>
-                        <button class="edit" 
-                                data-id="${repair.id}"
-                                data-hours="${repair.hours}">
-                            ✎
-                        </button>
-                        <button class="delete" 
-                                data-id="${repair.id}">
-                            🗑
-                        </button>
-                    </td>
-                </tr>
-            `)
-            .join('');
-    }).catch(error => {
-        console.error('Render table error:', error);
+    elements.carTableBody.innerHTML = '';
+    
+    repairsData.forEach(repair => {
+        const row = document.createElement('tr');
+        
+        row.innerHTML = `
+            <td>${repair.identifier}</td>
+            <td>${repair.date}</td>
+            <td>${repair.hours.toFixed(1)}</td>
+            <td>
+                <button class="edit" 
+                        data-id="${repair.id}"
+                        data-hours="${repair.hours}">
+                    ✎
+                </button>
+                <button class="delete" 
+                        data-id="${repair.id}">
+                    🗑
+                </button>
+            </td>
+        `;
+        
+        elements.carTableBody.appendChild(row);
     });
 }
 
 function renderSavedHoursTable() {
-    getRepairs().then(repairs => {
-        const daysMap = repairs.reduce((acc, repair) => {
-            acc[repair.date] = acc[repair.date] || { cars: 0, hours: 0 };
-            acc[repair.date].cars++;
-            acc[repair.date].hours += repair.hours;
-            return acc;
-        }, {});
-
-        const sortedDays = Object.entries(daysMap)
-            .map(([date, data]) => ({ date, ...data }))
-            .sort((a, b) => {
-                const [dA, mA, yA] = a.date.split('.');
-                const [dB, mB, yB] = b.date.split('.');
-                return new Date(yB, mB-1, dB) - new Date(yA, mA-1, dA);
-            });
-
-        elements.savedHoursTableBody.innerHTML = sortedDays
-            .map(day => `
-                <tr>
-                    <td>${day.date}</td>
-                    <td>${day.cars}</td>
-                    <td>${day.hours.toFixed(1)}</td>
-                </tr>
-            `).join('');
-    }).catch(error => {
-        console.error('Render history error:', error);
+    const daysMap = {};
+    
+    repairsData.forEach(repair => {
+        if (!daysMap[repair.date]) {
+            daysMap[repair.date] = { cars: 0, hours: 0 };
+        }
+        daysMap[repair.date].cars++;
+        daysMap[repair.date].hours += repair.hours;
     });
+    
+    const sortedDays = Object.entries(daysMap)
+        .map(([date, data]) => ({ date, ...data }))
+        .sort((a, b) => {
+            const [dA, mA, yA] = a.date.split('.');
+            const [dB, mB, yB] = b.date.split('.');
+            return new Date(yB, mB-1, dB) - new Date(yA, mA-1, dA);
+        });
+    
+    elements.savedHoursTableBody.innerHTML = sortedDays
+        .map(day => `
+            <tr>
+                <td>${day.date}</td>
+                <td>${day.cars}</td>
+                <td>${day.hours.toFixed(1)}</td>
+            </tr>
+        `).join('');
 }
 
 function updateStats() {
-    getRepairs().then(repairs => {
-        const today = getCurrentDate();
-        const todayRepairs = repairs.filter(repair => repair.date === today);
-        
-        const totalCars = todayRepairs.length;
-        const totalHours = todayRepairs.reduce((sum, repair) => sum + repair.hours, 0);
-        
-        elements.totalCars.textContent = totalCars;
-        elements.totalHours.textContent = totalHours.toFixed(1);
-    }).catch(error => {
-        console.error('Update stats error:', error);
-    });
+    const today = getCurrentDate();
+    const todayRepairs = repairsData.filter(repair => repair.date === today);
+    
+    const totalCars = todayRepairs.length;
+    const totalHours = todayRepairs.reduce((sum, repair) => sum + repair.hours, 0);
+    
+    elements.totalCars.textContent = totalCars;
+    elements.totalHours.textContent = totalHours.toFixed(1);
 }
 
 function exportFullHistory(format) {
-    getRepairs().then(repairs => {
-        const today = new Date().toISOString().slice(0, 10);
-        const data = repairs.map(repair => ({
-            date: repair.date,
-            identifier: repair.identifier,
-            hours: repair.hours
-        }));
-
-        if (format === 'csv') {
-            const csvContent = [
-                'Дата;Идентификатор;Часы',
-                ...data.map(item => `${item.date};${item.identifier};${item.hours.toFixed(1)}`)
-            ].join('\n');
-
-            const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8' });
-            downloadFile(blob, `история_ремонтов_${today}.csv`);
-        } else {
-            const jsonData = {
-                generated: new Date().toISOString(),
-                totalRecords: data.length,
-                repairs: data
-            };
-            const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
-            downloadFile(blob, `история_ремонтов_${today}.json`);
-        }
-    }).catch(error => {
-        console.error('Export error:', error);
-        showValidationMessage('Ошибка при экспорте данных', false);
-    });
+    const repairs = repairsData.map(repair => ({
+        date: repair.date,
+        identifier: repair.identifier,
+        hours: repair.hours
+    }));
+    
+    const today = new Date().toISOString().slice(0, 10);
+    
+    if (format === 'csv') {
+        const csvContent = [
+            'Дата;Идентификатор;Часы',
+            ...repairs.map(item => `${item.date};${item.identifier};${item.hours.toFixed(1)}`)
+        ].join('\n');
+        
+        const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8' });
+        downloadFile(blob, `история_ремонтов_${today}.csv`);
+    } else {
+        const jsonData = {
+            generated: new Date().toISOString(),
+            totalRecords: repairs.length,
+            repairs: repairs
+        };
+        const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
+        downloadFile(blob, `история_ремонтов_${today}.json`);
+    }
 }
 
 function downloadFile(blob, filename) {
@@ -550,4 +531,5 @@ function checkMobile() {
     document.body.classList.toggle('mobile', window.innerWidth < 768);
 }
 
+// Инициализация приложения
 init();
