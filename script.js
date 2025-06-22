@@ -19,11 +19,13 @@ const elements = {
     showLoginBtn: document.getElementById('show-login')
 };
 
+// Firebase конфигурация (ЗАМЕНИТЕ НА ВАШУ)
+const firebaseConfig = FIREBASE_API_KEY
+
 // Инициализация Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
-
 
 let currentUser = null;
 let repairsUnsubscribe = null;
