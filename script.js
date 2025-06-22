@@ -19,20 +19,11 @@ const elements = {
     showLoginBtn: document.getElementById('show-login')
 };
 
-// Firebase конфигурация (ЗАМЕНИТЕ НА ВАШУ)
-const firebaseConfig = {
-    apiKey: "AIzaSyBlFjb3N6BdiCT9kH94yrh01hVUprn_JzU",
-    authDomain: "carrepairtracker.firebaseapp.com",
-    projectId: "carrepairtracker",
-    storageBucket: "carrepairtracker.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
-};
-
 // Инициализация Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+
 
 let currentUser = null;
 let repairsUnsubscribe = null;
