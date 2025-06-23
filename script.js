@@ -23,7 +23,6 @@ const elements = {
 
 // Firebase конфигурация (ЗАМЕНИТЕ НА ВАШУ)
 const firebaseConfig = {
-    apiKey: "AIzaSyBlFjb3N6BdiCT9kH94yrh01hVUprn_JzU",
     authDomain: "carrepairtracker.firebaseapp.com",
     projectId: "carrepairtracker",
     storageBucket: "carrepairtracker.appspot.com",
