@@ -5,6 +5,15 @@ on:
     branches: [ main, export--4.0-firebase-final ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -20,7 +29,50 @@ jobs:
         
     - name: Create config.js from environment variables
       run: |
-        cat > config.js << EOF
+        # Проверяем наличие секретов
+        if [ -z "${{ secrets.FIREBASE_API_KEY }}" ]; then
+          echo "⚠️ FIREBASE_API_KEY не найден в секретах"
+          echo "Создаем демо-версию config.js"
+          cat > config.js << 'DEMO_EOF'
+        // Демо-конфигурация Firebase
+        window.APP_CONFIG = {
+          firebase: {
+            apiKey: "DEMO_API_KEY",
+            authDomain: "demo-project.firebaseapp.com",
+            projectId: "demo-project",
+            storageBucket: "demo-project.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:demo"
+          },
+          app: {
+            name: "Car Repair Tracker (Demo)",
+            version: "2.0.0",
+            debug: true
+          }
+        };
+        
+        // Предупреждение о демо-режиме
+        document.addEventListener('DOMContentLoaded', () => {
+          const warning = document.createElement('div');
+          warning.style.cssText = \`
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #ff9800;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            z-index: 10000;
+            font-weight: bold;
+          \`;
+          warning.textContent = '⚠️ Демо-режим. Добавьте GitHub Secrets для полноценной работы.';
+          document.body.appendChild(warning);
+        });
+        DEMO_EOF
+        else
+          echo "✅ Секреты найдены, создаем config.js с реальными данными"
+          cat > config.js << 'REAL_EOF'
         // Конфигурация Firebase из переменных окружения
         window.APP_CONFIG = {
           firebase: {
@@ -38,43 +90,18 @@ jobs:
           }
         };
         
-        // Проверка конфигурации
-        (function() {
-          const config = window.APP_CONFIG.firebase;
-          const requiredFields = ['apiKey', 'authDomain', 'projectId'];
-          
-          const missingFields = requiredFields.filter(field => 
-            !config[field] || config[field].includes('${{') || config[field] === ''
-          );
-          
-          if (missingFields.length > 0) {
-            console.warn('Firebase configuration incomplete. Missing:', missingFields);
-            console.warn('Please check GitHub Secrets configuration');
-            
-            document.addEventListener('DOMContentLoaded', () => {
-              const warning = document.createElement('div');
-              warning.style.cssText = \`
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                background: #f44336;
-                color: white;
-                padding: 10px;
-                text-align: center;
-                z-index: 10000;
-                font-weight: bold;
-              \`;
-              warning.textContent = '⚠️ Ошибка конфигурации Firebase. Проверьте настройки GitHub Secrets.';
-              document.body.appendChild(warning);
-            });
-          }
-        })();
-        EOF
+        console.log('✅ Firebase configuration loaded from GitHub Secrets');
+        REAL_EOF
+        fi
+        
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+      
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: '.'
         
     - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./
-        force_orphan: true
+      id: deployment
+      uses: actions/deploy-pages@v4
