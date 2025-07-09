@@ -379,18 +379,32 @@ function handleLogin(e) {
             // Успешный вход обрабатывается в onAuthStateChanged
         })
         .catch(error => {
+            console.error('Login error:', error);
             let message = 'Ошибка входа';
+            
             switch (error.code) {
                 case 'auth/user-not-found':
-                    message = 'Пользователь не найден';
+                    message = 'Пользователь не найден. Зарегистрируйтесь или проверьте email.';
                     break;
                 case 'auth/wrong-password':
-                    message = 'Неверный пароль';
+                    message = 'Неверный пароль. Проверьте правильность ввода.';
                     break;
                 case 'auth/invalid-email':
-                    message = 'Неверный формат email';
+                    message = 'Неверный формат email.';
                     break;
+                case 'auth/too-many-requests':
+                    message = 'Слишком много попыток. Попробуйте позже.';
+                    break;
+                case 'auth/network-request-failed':
+                    message = 'Ошибка сети. Проверьте интернет-соединение.';
+                    break;
+                case 'auth/invalid-api-key':
+                    message = 'Ошибка API ключа. Проверьте конфигурацию Firebase.';
+                    break;
+                default:
+                    message = `Ошибка входа: ${error.message}`;
             }
+            
             showValidationMessage(message, false);
         });
 }
@@ -414,18 +428,32 @@ function handleRegister(e) {
             showValidationMessage('Регистрация прошла успешно!', true);
         })
         .catch(error => {
+            console.error('Registration error:', error);
             let message = 'Ошибка регистрации';
+            
             switch (error.code) {
                 case 'auth/email-already-in-use':
-                    message = 'Email уже используется';
+                    message = 'Email уже используется. Попробуйте войти или используйте другой email.';
                     break;
                 case 'auth/weak-password':
-                    message = 'Слабый пароль (минимум 6 символов)';
+                    message = 'Слабый пароль. Минимум 6 символов.';
                     break;
                 case 'auth/invalid-email':
-                    message = 'Неверный формат email';
+                    message = 'Неверный формат email.';
                     break;
+                case 'auth/operation-not-allowed':
+                    message = 'Регистрация отключена. Проверьте настройки Firebase.';
+                    break;
+                case 'auth/invalid-api-key':
+                    message = 'Ошибка API ключа. Проверьте конфигурацию Firebase.';
+                    break;
+                case 'auth/network-request-failed':
+                    message = 'Ошибка сети. Проверьте интернет-соединение.';
+                    break;
+                default:
+                    message = `Ошибка регистрации: ${error.message}`;
             }
+            
             showValidationMessage(message, false);
         });
 }
