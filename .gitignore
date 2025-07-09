@@ -28,6 +28,9 @@ yarn-error.log*
 # Системные файлы
 .DS_Store
 Thumbs.db
+*.DS_Store
+.DS_Store?
+._*
 
 # Файлы сборки (если будут добавлены)
 dist/
