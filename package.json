@@ -1,0 +1,33 @@
+{
+  "name": "car-repair-tracker",
+  "version": "2.0.0",
+  "description": "Веб-приложение для учета ремонтов автомобилей с Firebase",
+  "main": "dev-server.js",
+  "scripts": {
+    "start": "node dev-server.js",
+    "dev": "node dev-server.js",
+    "serve": "python3 -m http.server 8000",
+    "build": "echo 'No build step required for static site'",
+    "test": "echo 'No tests specified'"
+  },
+  "keywords": [
+    "firebase",
+    "car-repair",
+    "tracker",
+    "web-app",
+    "javascript"
+  ],
+  "author": "Vitalik Aliutchyk",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vitalikaliutchyk/web-app.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vitalikaliutchyk/web-app/issues"
+  },
+  "homepage": "https://vitalikaliutchyk.github.io/web-app/"
+} 

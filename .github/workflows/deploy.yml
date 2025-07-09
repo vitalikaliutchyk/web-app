@@ -1,46 +1,80 @@
-name: Deploy Static Site
+name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ "export-2.0", "main", "developer-saved-days", "export-of-repairs" ]
+    branches: [ main, export--4.0-firebase-final ]
+  workflow_dispatch:
 
 jobs:
-  check-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pages: write
-      id-token: write
-
+    
     steps:
-    - name: Checkout repository
+    - name: Checkout
       uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
       with:
-        fetch-depth: 0  # Для полной истории коммитов
-
-    - name: Verify required files
-      run: |
-        required_files=("index.html" "styles.css" "script.js")
-        missing_counter=0
+        node-version: '18'
         
-        for file in "${required_files[@]}"; do
-          if [ ! -f "$file" ]; then
-            echo "❌ Error: $file not found!"
-            ((missing_counter++))
-          fi
-        done
-
-        if [ $missing_counter -ne 0 ]; then
-          echo "🚫 Missing $missing_counter required file(s)"
-          exit 1
-        else
-          echo "✅ All required files present"
-        fi
-
+    - name: Create config.js from environment variables
+      run: |
+        cat > config.js << EOF
+        // Конфигурация Firebase из переменных окружения
+        window.APP_CONFIG = {
+          firebase: {
+            apiKey: "${{ secrets.FIREBASE_API_KEY }}",
+            authDomain: "${{ secrets.FIREBASE_AUTH_DOMAIN }}",
+            projectId: "${{ secrets.FIREBASE_PROJECT_ID }}",
+            storageBucket: "${{ secrets.FIREBASE_STORAGE_BUCKET }}",
+            messagingSenderId: "${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}",
+            appId: "${{ secrets.FIREBASE_APP_ID }}"
+          },
+          app: {
+            name: "Car Repair Tracker",
+            version: "2.0.0",
+            debug: false
+          }
+        };
+        
+        // Проверка конфигурации
+        (function() {
+          const config = window.APP_CONFIG.firebase;
+          const requiredFields = ['apiKey', 'authDomain', 'projectId'];
+          
+          const missingFields = requiredFields.filter(field => 
+            !config[field] || config[field].includes('${{') || config[field] === ''
+          );
+          
+          if (missingFields.length > 0) {
+            console.warn('Firebase configuration incomplete. Missing:', missingFields);
+            console.warn('Please check GitHub Secrets configuration');
+            
+            document.addEventListener('DOMContentLoaded', () => {
+              const warning = document.createElement('div');
+              warning.style.cssText = \`
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                background: #f44336;
+                color: white;
+                padding: 10px;
+                text-align: center;
+                z-index: 10000;
+                font-weight: bold;
+              \`;
+              warning.textContent = '⚠️ Ошибка конфигурации Firebase. Проверьте настройки GitHub Secrets.';
+              document.body.appendChild(warning);
+            });
+          }
+        })();
+        EOF
+        
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./
-        force_orphan: true  # Очистка истории ветки gh-pages
-        full_commit_message: "Deploy: ${{ github.event.head_commit.message }}"
+        force_orphan: true
