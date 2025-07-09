@@ -21,43 +21,208 @@ const elements = {
     userEmail: document.getElementById('user-email')
 };
 
-// Firebase конфигурация (ЗАМЕНИТЕ НА ВАШУ)
+// Firebase конфигурация - загружается из config.js
 const firebaseConfig = {
-    apiKey: "AIzaSyBlFjb3N6BdiCT9kH94yrh01hVUprn_JzU",
-    authDomain: "carrepairtracker.firebaseapp.com",
-    projectId: "carrepairtracker",
-    storageBucket: "carrepairtracker.appspot.com",
+    apiKey: "YOUR_API_KEY",
+    authDomain: "your-project.firebaseapp.com",
+    projectId: "your-project-id",
+    storageBucket: "your-project.appspot.com",
     messagingSenderId: "YOUR_SENDER_ID",
     appId: "YOUR_APP_ID"
 };
 
-// Инициализация Firebase
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+// Загружаем конфигурацию из config.js
+if (window.APP_CONFIG && window.APP_CONFIG.firebase) {
+    Object.assign(firebaseConfig, window.APP_CONFIG.firebase);
+}
+
+// Проверка безопасности конфигурации
+function validateFirebaseConfig() {
+    const requiredFields = ['apiKey', 'authDomain', 'projectId'];
+    const missingFields = requiredFields.filter(field => !firebaseConfig[field]);
+    
+    if (missingFields.length > 0) {
+        console.error('Missing Firebase configuration fields:', missingFields);
+        return false;
+    }
+    
+    // Проверка на тестовые значения
+    if (firebaseConfig.apiKey === 'YOUR_API_KEY' || firebaseConfig.appId === 'YOUR_APP_ID') {
+        console.warn('Firebase configuration contains placeholder values - using demo mode');
+        return true; // Разрешаем работу в демо-режиме
+    }
+    
+    return true;
+}
+
+// Инициализация Firebase с проверкой
+if (!validateFirebaseConfig()) {
+    console.error('Invalid Firebase configuration');
+    // Не прерываем выполнение, показываем сообщение пользователю
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof showValidationMessage === 'function') {
+            showValidationMessage('Ошибка конфигурации приложения. Обратитесь к администратору.', false);
+        } else {
+            console.error('showValidationMessage function not available');
+        }
+    });
+}
+
+// Инициализация Firebase с обработкой ошибок
+let auth, db;
+
+try {
+    firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db = firebase.firestore();
+    
+    // Проверяем доступность Firebase
+    db.enableNetwork().then(() => {
+        console.log('Firebase connection established');
+    }).catch(error => {
+        console.error('Firebase connection failed:', error);
+        // Отложим показ сообщения до загрузки DOM
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof showValidationMessage === 'function') {
+                showValidationMessage('Ошибка подключения к базе данных. Проверьте интернет-соединение.', false);
+            }
+        });
+    });
+    
+} catch (error) {
+    console.error('Firebase initialization error:', error);
+    // Отложим показ сообщения до загрузки DOM
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof showValidationMessage === 'function') {
+            showValidationMessage('Ошибка инициализации Firebase. Проверьте конфигурацию.', false);
+        }
+    });
+}
 
 let currentUser = null;
 let repairsUnsubscribe = null;
 let repairsData = []; // Глобальный массив для хранения данных о ремонтах
 
+// Настройки пагинации и кэширования
+const PAGINATION_CONFIG = {
+    itemsPerPage: 20,
+    currentPage: 1,
+    totalPages: 1
+};
+
+// Кэш для данных
+const dataCache = {
+    repairs: new Map(),
+    stats: null,
+    lastUpdate: null,
+    cacheTimeout: 5 * 60 * 1000 // 5 минут
+};
+
+// Состояние приложения
+const appState = {
+    isLoading: false,
+    isOnline: navigator.onLine,
+    currentView: 'form', // form, table, history
+    sortBy: 'timestamp',
+    sortOrder: 'desc',
+    filter: ''
+};
+
+// Глобальная обработка ошибок
+function setupGlobalErrorHandling() {
+    // Обработка необработанных ошибок
+    window.addEventListener('error', (event) => {
+        console.error('Global error:', event.error);
+        if (typeof showValidationMessage === 'function') {
+            showValidationMessage('Произошла ошибка в приложении. Попробуйте обновить страницу.', false);
+        }
+    });
+
+    // Обработка необработанных отклонений промисов
+    window.addEventListener('unhandledrejection', (event) => {
+        console.error('Unhandled promise rejection:', event.reason);
+        if (typeof showValidationMessage === 'function') {
+            showValidationMessage('Произошла ошибка при выполнении операции. Попробуйте позже.', false);
+        }
+    });
+
+    // Обработка ошибок сети
+    window.addEventListener('online', () => {
+        if (typeof showValidationMessage === 'function') {
+            showValidationMessage('Соединение восстановлено', true);
+        }
+    });
+
+    window.addEventListener('offline', () => {
+        if (typeof showValidationMessage === 'function') {
+            showValidationMessage('Нет подключения к интернету', false);
+        }
+    });
+}
+
 function init() {
+    setupGlobalErrorHandling();
     bindEvents();
     checkMobile();
     checkAuthState();
 }
 
 function bindEvents() {
-    elements.carForm.addEventListener('submit', handleFormSubmit);
-    elements.identifierInput.addEventListener('input', validateIdentifier);
-    elements.hoursInput.addEventListener('input', validateHours);
+    // Проверяем существование элементов перед привязкой событий
+    if (elements.carForm) {
+        elements.carForm.addEventListener('submit', handleFormSubmit);
+    }
+    if (elements.identifierInput) {
+        elements.identifierInput.addEventListener('input', validateIdentifier);
+    }
+    if (elements.hoursInput) {
+        elements.hoursInput.addEventListener('input', validateHours);
+    }
+    
     document.addEventListener('click', handleTableActions);
     window.addEventListener('resize', checkMobile);
 
-    elements.loginForm.addEventListener('submit', handleLogin);
-    elements.registerForm.addEventListener('submit', handleRegister);
-    elements.showRegisterBtn.addEventListener('click', showRegister);
-    elements.showLoginBtn.addEventListener('click', showLogin);
-    elements.logoutBtn.addEventListener('click', logout);
+    if (elements.loginForm) {
+        elements.loginForm.addEventListener('submit', handleLogin);
+    }
+    if (elements.registerForm) {
+        elements.registerForm.addEventListener('submit', handleRegister);
+    }
+    if (elements.showRegisterBtn) {
+        elements.showRegisterBtn.addEventListener('click', showRegister);
+    }
+    if (elements.showLoginBtn) {
+        elements.showLoginBtn.addEventListener('click', showLogin);
+    }
+    if (elements.logoutBtn) {
+        elements.logoutBtn.addEventListener('click', logout);
+    }
+
+    // Новые элементы для поиска и фильтрации
+    const searchInput = document.getElementById('search-input');
+    const searchBtn = document.getElementById('search-btn');
+    const sortSelect = document.getElementById('sort-select');
+    const dateFilter = document.getElementById('date-filter');
+    const prevPageBtn = document.getElementById('prev-page');
+    const nextPageBtn = document.getElementById('next-page');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce(handleSearch, 300));
+        searchBtn.addEventListener('click', handleSearch);
+    }
+    
+    if (sortSelect) {
+        sortSelect.addEventListener('change', handleSort);
+    }
+    
+    if (dateFilter) {
+        dateFilter.addEventListener('change', handleDateFilter);
+    }
+    
+    if (prevPageBtn && nextPageBtn) {
+        prevPageBtn.addEventListener('click', () => changePage(-1));
+        nextPageBtn.addEventListener('click', () => changePage(1));
+    }
 
     document.querySelectorAll('.fab-item').forEach(button => {
         button.addEventListener('click', e => {
@@ -68,7 +233,57 @@ function bindEvents() {
     });
 }
 
+// Функция debounce для оптимизации поиска
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Обработчики поиска и фильтрации
+function handleSearch() {
+    const searchTerm = document.getElementById('search-input').value.toLowerCase();
+    appState.filter = searchTerm;
+    PAGINATION_CONFIG.currentPage = 1;
+    renderCarTable();
+}
+
+function handleSort() {
+    const sortValue = document.getElementById('sort-select').value;
+    const [field, order] = sortValue.split('-');
+    appState.sortBy = field;
+    appState.sortOrder = order;
+    renderCarTable();
+}
+
+function handleDateFilter() {
+    const filterValue = document.getElementById('date-filter').value;
+    appState.dateFilter = filterValue;
+    PAGINATION_CONFIG.currentPage = 1;
+    renderCarTable();
+}
+
+function changePage(direction) {
+    const newPage = PAGINATION_CONFIG.currentPage + direction;
+    if (newPage >= 1 && newPage <= PAGINATION_CONFIG.totalPages) {
+        PAGINATION_CONFIG.currentPage = newPage;
+        renderCarTable();
+    }
+}
+
 function checkAuthState() {
+    if (!auth) {
+        console.error('Firebase Auth not initialized');
+        showValidationMessage('Ошибка инициализации аутентификации', false);
+        return;
+    }
+    
     auth.onAuthStateChanged(user => {
         if (user) {
             currentUser = user;
@@ -81,6 +296,11 @@ function checkAuthState() {
 }
 
 function setupRealtimeUpdates() {
+    if (!db || !currentUser) {
+        console.error('Firebase DB or user not available');
+        return;
+    }
+    
     // Отписываемся от предыдущих обновлений
     if (repairsUnsubscribe) repairsUnsubscribe();
     
@@ -237,25 +457,89 @@ function showValidationMessage(message, isSuccess) {
     }, 3000);
 }
 
+// Улучшенная валидация идентификаторов
 function validateIdentifier() {
-    const identifierType = document.getElementById('identifier-type').value;
-    const identifier = elements.identifierInput.value.trim().toUpperCase();
-
-    let isValid = false;
-
-    if (identifierType === 'reg') {
-        isValid = /^[0-9]{4}\s?[A-Z]{2}-[1-7]$/.test(identifier);
-        elements.identifierInput.setCustomValidity(
-            isValid ? '' : 'Формат: 1234 AB-1'
-        );
-    } else {
-        isValid = /^[A-Z0-9]{4}$/.test(identifier);
-        elements.identifierInput.setCustomValidity(
-            isValid ? '' : '4 заглавных символа'
-        );
+    const input = elements.identifierInput;
+    const value = input.value.trim().toUpperCase();
+    const type = document.getElementById('identifier-type').value;
+    
+    // Автоматическое приведение к верхнему регистру
+    input.value = value;
+    
+    if (type === 'reg') {
+        // Расширенная валидация гос. номера РБ: 1234 AB-1, 1234 AB-12
+        const regPattern = /^\d{4}\s[A-ZА-Я]{2}-\d{1,2}$/;
+        if (regPattern.test(value)) {
+            // Дополнительная проверка на корректные буквы
+            const letters = value.match(/[A-ZА-Я]{2}/)[0];
+            const validLetters = /^[ABEKMHOPCTYXАВЕКМНОРСТУХ]{2}$/;
+            
+            if (validLetters.test(letters)) {
+                input.setCustomValidity('');
+                input.classList.remove('invalid');
+                input.classList.add('valid');
+            } else {
+                input.setCustomValidity('Недопустимые буквы в номере');
+                input.classList.remove('valid');
+                input.classList.add('invalid');
+            }
+        } else {
+            input.setCustomValidity('Формат: 1234 AB-1 или 1234 AB-12');
+            input.classList.remove('valid');
+            input.classList.add('invalid');
+        }
+    } else if (type === 'vin') {
+        // Валидация VIN: последние 4 символа или полный VIN
+        if (value.length === 4) {
+            const vinPattern = /^[A-Z0-9]{4}$/;
+            if (vinPattern.test(value)) {
+                input.setCustomValidity('');
+                input.classList.remove('invalid');
+                input.classList.add('valid');
+            } else {
+                input.setCustomValidity('Введите последние 4 символа VIN (буквы и цифры)');
+                input.classList.remove('valid');
+                input.classList.add('invalid');
+            }
+        } else if (value.length === 17) {
+            const fullVinPattern = /^[A-Z0-9]{17}$/;
+            if (fullVinPattern.test(value)) {
+                // Извлекаем последние 4 символа
+                input.value = value.slice(-4);
+                input.setCustomValidity('');
+                input.classList.remove('invalid');
+                input.classList.add('valid');
+            } else {
+                input.setCustomValidity('Полный VIN должен содержать 17 символов (буквы и цифры)');
+                input.classList.remove('valid');
+                input.classList.add('invalid');
+            }
+        } else {
+            input.setCustomValidity('Введите последние 4 символа VIN или полный VIN (17 символов)');
+            input.classList.remove('valid');
+            input.classList.add('invalid');
+        }
     }
+    
+    input.reportValidity();
+}
 
-    elements.identifierInput.reportValidity();
+// Проверка на дублирование записей
+async function checkDuplicateRecord(identifier, hours, date) {
+    if (!currentUser) return false;
+    
+    try {
+        const snapshot = await db.collection('repairs')
+            .where('userId', '==', currentUser.uid)
+            .where('identifier', '==', identifier)
+            .where('date', '==', date)
+            .get();
+        
+        return !snapshot.empty;
+    } catch (error) {
+        console.error('Error checking duplicates:', error);
+        return false;
+    }
 }
 
 function validateHours() {
@@ -334,28 +618,55 @@ function handleFormSubmit(e) {
             return;
         }
         
-        db.collection('repairs').add({
-            userId: currentUser.uid,
-            identifier,
-            date,
-            hours,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        })
-        .then(() => {
-            elements.carForm.reset();
-            // Сообщение об успехе покажет onSnapshot после обновления данных
-        })
-        .catch(error => {
-            console.error('Add repair error:', error);
-            
-            let message = 'Ошибка при добавлении данных';
-            if (error.code === 'permission-denied') {
-                message = 'Недостаточно прав. Проверьте правила Firestore.';
-            } else if (error.code === 'failed-precondition') {
-                message = 'Требуется создать индекс. Проверьте консоль.';
+        // Проверка на дубликаты
+        checkDuplicateRecord(identifier, hours, date).then(isDuplicate => {
+            if (isDuplicate) {
+                const confirmAdd = confirm(
+                    `Запись для ${identifier} на ${date} уже существует. Добавить дубликат?`
+                );
+                if (!confirmAdd) return;
             }
             
-            showValidationMessage(message, false);
+            // Показываем индикатор загрузки
+            appState.isLoading = true;
+            const submitBtn = elements.carForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Добавление...';
+            submitBtn.disabled = true;
+            
+            db.collection('repairs').add({
+                userId: currentUser.uid,
+                identifier,
+                date,
+                hours,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            })
+            .then(() => {
+                elements.carForm.reset();
+                showValidationMessage('Запись успешно добавлена!', true);
+                // Сброс состояния формы
+                elements.identifierInput.classList.remove('valid', 'invalid');
+            })
+            .catch(error => {
+                console.error('Add repair error:', error);
+                
+                let message = 'Ошибка при добавлении данных';
+                if (error.code === 'permission-denied') {
+                    message = 'Недостаточно прав. Проверьте правила Firestore.';
+                } else if (error.code === 'failed-precondition') {
+                    message = 'Требуется создать индекс. Проверьте консоль.';
+                } else if (error.code === 'unavailable') {
+                    message = 'Сервис временно недоступен. Проверьте подключение к интернету.';
+                }
+                
+                showValidationMessage(message, false);
+            })
+            .finally(() => {
+                // Восстанавливаем состояние кнопки
+                appState.isLoading = false;
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            });
         });
     } else {
         let errors = [];
@@ -406,9 +717,31 @@ function renderAll() {
 }
 
 function renderCarTable() {
+    // Показываем индикатор загрузки
+    const loadingIndicator = document.getElementById('loading-indicator');
+    if (loadingIndicator) {
+        loadingIndicator.classList.remove('hidden');
+    }
+    
+    // Фильтрация данных
+    let filteredData = filterData(repairsData);
+    
+    // Сортировка данных
+    filteredData = sortData(filteredData);
+    
+    // Пагинация
+    const totalItems = filteredData.length;
+    PAGINATION_CONFIG.totalPages = Math.ceil(totalItems / PAGINATION_CONFIG.itemsPerPage);
+    
+    const startIndex = (PAGINATION_CONFIG.currentPage - 1) * PAGINATION_CONFIG.itemsPerPage;
+    const endIndex = startIndex + PAGINATION_CONFIG.itemsPerPage;
+    const paginatedData = filteredData.slice(startIndex, endIndex);
+    
+    // Очищаем таблицу
     elements.carTableBody.innerHTML = '';
     
-    repairsData.forEach(repair => {
+    // Рендерим данные
+    paginatedData.forEach(repair => {
         const row = document.createElement('tr');
         
         row.innerHTML = `
@@ -430,6 +763,106 @@ function renderCarTable() {
         
         elements.carTableBody.appendChild(row);
     });
+    
+    // Обновляем пагинацию
+    updatePagination();
+    
+    // Скрываем индикатор загрузки
+    if (loadingIndicator) {
+        loadingIndicator.classList.add('hidden');
+    }
+}
+
+// Функция фильтрации данных
+function filterData(data) {
+    let filtered = [...data];
+    
+    // Фильтр по поиску
+    if (appState.filter) {
+        filtered = filtered.filter(repair => 
+            repair.identifier.toLowerCase().includes(appState.filter)
+        );
+    }
+    
+    // Фильтр по дате
+    if (appState.dateFilter && appState.dateFilter !== 'all') {
+        const today = new Date();
+        const todayStr = getCurrentDate();
+        
+        filtered = filtered.filter(repair => {
+            switch (appState.dateFilter) {
+                case 'today':
+                    return repair.date === todayStr;
+                case 'week':
+                    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    return isDateInRange(repair.date, weekAgo, today);
+                case 'month':
+                    const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+                    return isDateInRange(repair.date, monthAgo, today);
+                default:
+                    return true;
+            }
+        });
+    }
+    
+    return filtered;
+}
+
+// Функция сортировки данных
+function sortData(data) {
+    return data.sort((a, b) => {
+        let aValue, bValue;
+        
+        switch (appState.sortBy) {
+            case 'identifier':
+                aValue = a.identifier;
+                bValue = b.identifier;
+                break;
+            case 'hours':
+                aValue = parseFloat(a.hours);
+                bValue = parseFloat(b.hours);
+                break;
+            case 'timestamp':
+            default:
+                aValue = a.timestamp ? a.timestamp.toDate() : new Date(0);
+                bValue = b.timestamp ? b.timestamp.toDate() : new Date(0);
+                break;
+        }
+        
+        if (appState.sortOrder === 'asc') {
+            return aValue > bValue ? 1 : -1;
+        } else {
+            return aValue < bValue ? 1 : -1;
+        }
+    });
+}
+
+// Функция проверки даты в диапазоне
+function isDateInRange(dateStr, startDate, endDate) {
+    const [day, month, year] = dateStr.split('.').map(Number);
+    const date = new Date(year, month - 1, day);
+    return date >= startDate && date <= endDate;
+}
+
+// Функция обновления пагинации
+function updatePagination() {
+    const pagination = document.getElementById('pagination');
+    const pageInfo = document.getElementById('page-info');
+    const prevBtn = document.getElementById('prev-page');
+    const nextBtn = document.getElementById('next-page');
+    
+    if (!pagination || !pageInfo || !prevBtn || !nextBtn) return;
+    
+    if (PAGINATION_CONFIG.totalPages <= 1) {
+        pagination.classList.add('hidden');
+        return;
+    }
+    
+    pagination.classList.remove('hidden');
+    pageInfo.textContent = `Страница ${PAGINATION_CONFIG.currentPage} из ${PAGINATION_CONFIG.totalPages}`;
+    
+    prevBtn.disabled = PAGINATION_CONFIG.currentPage === 1;
+    nextBtn.disabled = PAGINATION_CONFIG.currentPage === PAGINATION_CONFIG.totalPages;
 }
 
 function renderSavedHoursTable() {
@@ -535,5 +968,12 @@ function checkMobile() {
     document.body.classList.toggle('mobile', window.innerWidth < 768);
 }
 
-// Инициализация приложения
-init();
+// Инициализация приложения при загрузке страницы
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        init();
+    } catch (error) {
+        console.error('Application initialization error:', error);
+        showValidationMessage('Ошибка инициализации приложения. Попробуйте обновить страницу.', false);
+    }
+});

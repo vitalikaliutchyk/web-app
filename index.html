@@ -3,7 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Веб-приложение для учёта ремонтов автомобилей">
+    <meta name="theme-color" content="#1a73e8">
     <title>Учёт автомобилей</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+    
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -87,6 +93,43 @@
 
         <div id="table-container" class="hidden">
             <h2>Список автомобилей</h2>
+            
+            <!-- Панель поиска и фильтрации -->
+            <div class="table-controls">
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="Поиск по идентификатору..." />
+                    <button id="search-btn" class="search-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24">
+                            <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="filter-controls">
+                    <select id="sort-select">
+                        <option value="timestamp-desc">Сначала новые</option>
+                        <option value="timestamp-asc">Сначала старые</option>
+                        <option value="identifier-asc">По номеру (А-Я)</option>
+                        <option value="identifier-desc">По номеру (Я-А)</option>
+                        <option value="hours-desc">По часам (больше)</option>
+                        <option value="hours-asc">По часам (меньше)</option>
+                    </select>
+                    
+                    <select id="date-filter">
+                        <option value="all">Все даты</option>
+                        <option value="today">Сегодня</option>
+                        <option value="week">За неделю</option>
+                        <option value="month">За месяц</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Индикатор загрузки -->
+            <div id="loading-indicator" class="loading-indicator hidden">
+                <div class="spinner"></div>
+                <span>Загрузка данных...</span>
+            </div>
+            
             <table id="car-table">
                 <thead>
                     <tr>
@@ -98,6 +141,13 @@
                 </thead>
                 <tbody></tbody>
             </table>
+            
+            <!-- Пагинация -->
+            <div id="pagination" class="pagination hidden">
+                <button id="prev-page" class="pagination-btn">←</button>
+                <span id="page-info">Страница 1 из 1</span>
+                <button id="next-page" class="pagination-btn">→</button>
+            </div>
         </div>
 
         <div id="saved-hours-container" class="hidden">
@@ -156,6 +206,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
