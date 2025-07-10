@@ -890,57 +890,30 @@ function exportFullHistoryPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'landscape' });
 
-    // Заголовок
+    doc.setFont('times', 'normal'); // 'times' поддерживает кириллицу
+
     doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
     doc.text('История ремонтов', 148, 15, { align: 'center' });
 
-    // Подзаголовок с датой
     doc.setFontSize(11);
-    doc.setFont('helvetica', 'normal');
     const today = new Date().toLocaleDateString();
     doc.text(`Дата экспорта: ${today}`, 14, 25);
 
-    // Данные таблицы
-    const headers = ['Дата', 'Идентификатор', 'Часы'];
-    const data = repairsData.map(repair => [repair.date, repair.identifier, repair.hours.toFixed(1)]);
+    const headers = [['Дата', 'Идентификатор', 'Часы']];
+    const data = repairsData.map(repair => [
+        repair.date,
+        repair.identifier,
+        repair.hours.toFixed(1)
+    ]);
 
-    // Стили для таблицы
-    let startY = 35;
-    const rowHeight = 10;
-    const colWidths = [40, 80, 30];
-    const startX = 14;
-
-    // Рисуем заголовки
-    doc.setFillColor(230, 230, 230);
-    doc.setDrawColor(180, 180, 180);
-    doc.setFont('helvetica', 'bold');
-    let x = startX;
-    headers.forEach((header, i) => {
-        doc.rect(x, startY, colWidths[i], rowHeight, 'FD');
-        doc.text(header, x + 2, startY + 7);
-        x += colWidths[i];
+    doc.autoTable({
+        head: headers,
+        body: data,
+        startY: 35,
+        styles: { font: 'times', fontSize: 12 },
+        headStyles: { fillColor: [230, 230, 230] }
     });
 
-    // Рисуем строки данных
-    doc.setFont('helvetica', 'normal');
-    let y = startY + rowHeight;
-    data.forEach(row => {
-        x = startX;
-        row.forEach((cell, i) => {
-            doc.rect(x, y, colWidths[i], rowHeight);
-            doc.text(String(cell), x + 2, y + 7);
-            x += colWidths[i];
-        });
-        y += rowHeight;
-        // Перенос на новую страницу, если не помещается
-        if (y + rowHeight > 200) {
-            doc.addPage('landscape');
-            y = 20;
-        }
-    });
-
-    // Сохраняем PDF
     const fileDate = new Date().toISOString().slice(0, 10);
     doc.save(`история_ремонтов_${fileDate}.pdf`);
 }
