@@ -890,7 +890,12 @@ function exportFullHistoryPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'landscape' });
 
-    doc.setFont('Roboto-Regular');
+    // Регистрируем кастомный шрифт Roboto-Regular
+    if (window.RobotoRegular) {
+        doc.addFileToVFS("Roboto-Regular.ttf", window.RobotoRegular);
+        doc.addFont("Roboto-Regular.ttf", "Roboto-Regular", "normal");
+        doc.setFont("Roboto-Regular");
+    }
 
     doc.setFontSize(18);
     doc.text('История ремонтов', 148, 15, { align: 'center' });

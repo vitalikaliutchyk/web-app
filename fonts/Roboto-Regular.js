@@ -1,1 +1,2 @@
-404: Not Found
+// Roboto-Regular.ttf as base64 for jsPDF
+window.RobotoRegular = "AAEAAAASAQAABAAgR0RFRrRCsIIAAACcAAAAYGNtYXAWAAABHAAAADZnbHlm2w2uAAABuAAAADZoaGVhB9gA..."; // (Обрезано для примера, будет длинная строка)
