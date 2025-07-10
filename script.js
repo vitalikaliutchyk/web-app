@@ -512,12 +512,7 @@ function handleFabAction(action) {
         case 'toggle-history':
             toggleElement(elements.savedHoursContainer);
             break;
-        case 'export-csv':
-            exportFullHistory('csv');
-            break;
-        case 'export-json':
-            exportFullHistory('json');
-            break;
+
         case 'export-pdf':
             exportFullHistoryPDF();
             break;
@@ -858,33 +853,7 @@ function updateStats() {
     elements.totalHours.textContent = totalHours.toFixed(1);
 }
 
-function exportFullHistory(format) {
-    const repairs = repairsData.map(repair => ({
-        date: repair.date,
-        identifier: repair.identifier,
-        hours: repair.hours
-    }));
-    
-    const today = new Date().toISOString().slice(0, 10);
-    
-    if (format === 'csv') {
-        const csvContent = [
-            'Дата;Идентификатор;Часы',
-            ...repairs.map(item => `${item.date};${item.identifier};${item.hours.toFixed(1)}`)
-        ].join('\n');
-        
-        const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8' });
-        downloadFile(blob, `история_ремонтов_${today}.csv`);
-    } else {
-        const jsonData = {
-            generated: new Date().toISOString(),
-            totalRecords: repairs.length,
-            repairs: repairs
-        };
-        const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
-        downloadFile(blob, `история_ремонтов_${today}.json`);
-    }
-}
+
 
 
 
@@ -983,14 +952,7 @@ function exportFullHistoryPDF() {
 
 
 
-function downloadFile(blob, filename) {
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
+
 
 function toggleFabMenu() {
     const fabMain = document.querySelector('.fab-main');
