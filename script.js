@@ -256,9 +256,8 @@ function setupRealtimeUpdates() {
     
     // Подписываемся на обновления для текущего пользователя
     repairsUnsubscribe = db.collection('repairs')
-        // Временно убираем фильтр и сортировку для отладки
-        // .where('userId', '==', currentUser.uid)
-        // .orderBy('timestamp', 'desc')
+        .where('userId', '==', currentUser.uid)
+        .orderBy('timestamp', 'desc')
         .onSnapshot(snapshot => {
             repairsData = []; // Очищаем массив перед обновлением
             
@@ -494,18 +493,23 @@ function validateIdentifier() {
     input.reportValidity();
 }
 
-// Проверка на дублирование записей
+// Проверка на дублирование записей (временно отключена для отладки)
 async function checkDuplicateRecord(identifier, hours, date) {
     if (!currentUser) return false;
     
     try {
+        // Временно упрощаем запрос для отладки
         const snapshot = await db.collection('repairs')
             .where('userId', '==', currentUser.uid)
-            .where('identifier', '==', identifier)
-            .where('date', '==', date)
             .get();
         
-        return !snapshot.empty;
+        // Проверяем дубликаты в памяти
+        const duplicates = snapshot.docs.filter(doc => {
+            const data = doc.data();
+            return data.identifier === identifier && data.date === date;
+        });
+        
+        return duplicates.length > 0;
     } catch (error) {
         console.error('Error checking duplicates:', error);
         return false;
