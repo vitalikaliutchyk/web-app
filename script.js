@@ -21,27 +21,7 @@ const elements = {
     userEmail: document.getElementById('user-email')
 };
 
-// Firebase конфигурация загружается из config.js
-// Конфигурация уже инициализирована в config.js
 
-// Проверка безопасности конфигурации
-function validateFirebaseConfig() {
-    const requiredFields = ['apiKey', 'authDomain', 'projectId'];
-    const missingFields = requiredFields.filter(field => !firebaseConfig[field]);
-    
-    if (missingFields.length > 0) {
-        console.error('Missing Firebase configuration fields:', missingFields);
-        return false;
-    }
-    
-    // Проверка на тестовые значения
-    if (firebaseConfig.apiKey === 'YOUR_API_KEY' || firebaseConfig.appId === 'YOUR_APP_ID') {
-        console.warn('Firebase configuration contains placeholder values - using demo mode');
-        return true; // Разрешаем работу в демо-режиме
-    }
-    
-    return true;
-}
 
 // Firebase уже инициализирован в config.js
 // Используем глобальные переменные auth и db из config.js
