@@ -890,7 +890,7 @@ function exportFullHistoryPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'landscape' });
 
-    doc.setFont('times', 'normal'); // 'times' поддерживает кириллицу
+    doc.setFont('Roboto-Regular');
 
     doc.setFontSize(18);
     doc.text('История ремонтов', 148, 15, { align: 'center' });
@@ -910,7 +910,7 @@ function exportFullHistoryPDF() {
         head: headers,
         body: data,
         startY: 35,
-        styles: { font: 'times', fontSize: 12 },
+        styles: { font: 'Roboto-Regular', fontSize: 12 },
         headStyles: { fillColor: [230, 230, 230] }
     });
 
