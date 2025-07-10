@@ -886,42 +886,102 @@ function exportFullHistory(format) {
     }
 }
 
+
+
+
+
 function exportFullHistoryPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'landscape' });
 
-    // Регистрируем кастомный шрифт Roboto-Regular
-    if (window.RobotoRegular) {
-        doc.addFileToVFS("Roboto-Regular.ttf", window.RobotoRegular);
-        doc.addFont("Roboto-Regular.ttf", "Roboto-Regular", "normal");
-        doc.setFont("Roboto-Regular");
-    }
+    // Создаем canvas с высоким разрешением для четкого текста
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Увеличиваем разрешение в 2 раза для четкости
+    const scale = 2;
+    canvas.width = 1600 * scale;
+    canvas.height = 1200 * scale;
+    
+    // Масштабируем контекст
+    ctx.scale(scale, scale);
+    
+    // Устанавливаем сглаживание для лучшего качества
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
-    doc.setFontSize(18);
-    doc.text('История ремонтов', 148, 15, { align: 'center' });
+    // Устанавливаем шрифт для canvas с большим размером
+    ctx.font = 'bold 20px Arial';
+    ctx.fillStyle = 'black';
+    ctx.textAlign = 'center';
 
-    doc.setFontSize(11);
-    const today = new Date().toLocaleDateString();
-    doc.text(`Дата экспорта: ${today}`, 14, 25);
+    // Рендерим заголовок
+    ctx.fillText('История ремонтов', 800, 50);
 
-    const headers = [['Дата', 'Идентификатор', 'Часы']];
-    const data = repairsData.map(repair => [
-        repair.date,
-        repair.identifier,
-        repair.hours.toFixed(1)
-    ]);
+    ctx.font = '16px Arial';
+    ctx.textAlign = 'left';
+    const today = new Date().toLocaleDateString('ru-RU');
+    ctx.fillText(`Дата экспорта: ${today}`, 50, 90);
 
-    doc.autoTable({
-        head: headers,
-        body: data,
-        startY: 35,
-        styles: { font: 'Roboto-Regular', fontSize: 12 },
-        headStyles: { fillColor: [230, 230, 230] }
+    // Рендерим таблицу
+    let y = 120;
+    const headers = ['Дата', 'Идентификатор', 'Часы'];
+    const colWidths = [220, 450, 180];
+    let x = 50;
+
+    // Заголовки таблицы с улучшенным дизайном
+    ctx.font = 'bold 16px Arial';
+    ctx.fillStyle = '#f5f5f5';
+    ctx.fillRect(x, y - 25, colWidths[0], 30);
+    ctx.fillRect(x + colWidths[0], y - 25, colWidths[1], 30);
+    ctx.fillRect(x + colWidths[0] + colWidths[1], y - 25, colWidths[2], 30);
+
+    // Границы заголовков
+    ctx.strokeStyle = '#ddd';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y - 25, colWidths[0], 30);
+    ctx.strokeRect(x + colWidths[0], y - 25, colWidths[1], 30);
+    ctx.strokeRect(x + colWidths[0] + colWidths[1], y - 25, colWidths[2], 30);
+
+    ctx.fillStyle = 'black';
+    ctx.fillText(headers[0], x + 15, y);
+    ctx.fillText(headers[1], x + colWidths[0] + 15, y);
+    ctx.fillText(headers[2], x + colWidths[0] + colWidths[1] + 15, y);
+
+    y += 35;
+
+    // Данные таблицы
+    ctx.font = '14px Arial';
+    repairsData.forEach((repair, index) => {
+        if (y > 1100) {
+            // Добавляем новую страницу
+            doc.addPage();
+            y = 80;
+        }
+
+        // Альтернативные цвета строк для лучшей читаемости
+        if (index % 2 === 0) {
+            ctx.fillStyle = '#fafafa';
+            ctx.fillRect(x, y - 20, colWidths[0] + colWidths[1] + colWidths[2], 25);
+        }
+
+        ctx.fillStyle = 'black';
+        ctx.fillText(repair.date, x + 15, y);
+        ctx.fillText(repair.identifier, x + colWidths[0] + 15, y);
+        ctx.fillText(repair.hours.toFixed(1), x + colWidths[0] + colWidths[1] + 15, y);
+
+        y += 25;
     });
+
+    // Конвертируем canvas в изображение с высоким качеством
+    const imgData = canvas.toDataURL('image/png', 1.0);
+    doc.addImage(imgData, 'PNG', 0, 0, 297, 210);
 
     const fileDate = new Date().toISOString().slice(0, 10);
     doc.save(`история_ремонтов_${fileDate}.pdf`);
 }
+
+
 
 function downloadFile(blob, filename) {
     const link = document.createElement('a');
