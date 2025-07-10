@@ -1,40 +1,9 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Правила для коллекции repairs
-    match /repairs/{document} {
-      // Разрешаем чтение и запись только аутентифицированным пользователям
-      // Пользователь может работать только со своими данными
-      allow read, write: if request.auth != null && 
-                          request.auth.uid == resource.data.userId;
-      
-      // Разрешаем создание новых записей
-      allow create: if request.auth != null && 
-                     request.auth.uid == request.resource.data.userId &&
-                     request.resource.data.identifier is string &&
-                     request.resource.data.hours is number &&
-                     request.resource.data.hours >= 0.1 &&
-                     request.resource.data.hours <= 24 &&
-                     request.resource.data.date is string;
-      
-      // Разрешаем обновление только часов
-      allow update: if request.auth != null && 
-                     request.auth.uid == resource.data.userId &&
-                     request.resource.data.diff(resource.data).affectedKeys()
-                       .hasOnly(['hours']) &&
-                     request.resource.data.hours is number &&
-                     request.resource.data.hours >= 0.1 &&
-                     request.resource.data.hours <= 24;
-      
-      // Разрешаем удаление
-      allow delete: if request.auth != null && 
-                     request.auth.uid == resource.data.userId;
-    }
-    
-    // Правила для пользовательских профилей (если понадобятся в будущем)
-    match /users/{userId} {
-      allow read, write: if request.auth != null && 
-                          request.auth.uid == userId;
+    // Временно разрешаем все операции для отладки
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 } 

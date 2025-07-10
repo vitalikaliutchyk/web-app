@@ -1,37 +1,43 @@
-# Конфиденциальные файлы конфигурации
-config.js
+# Netlify
+.netlify/
+
+# Environment variables
 .env
 .env.local
 .env.production
 
-# Логи и временные файлы
-*.log
-*.tmp
-*.temp
-
-# Кэш браузера
-.cache/
-.parcel-cache/
-
-# Зависимости (если будут добавлены)
+# Dependencies
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Файлы IDE
+# Build outputs
+dist/
+build/
+
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# Системные файлы
+# OS
 .DS_Store
 Thumbs.db
-*.DS_Store
-.DS_Store?
-._*
 
-# Файлы сборки (если будут добавлены)
-dist/
-build/ 
+# Logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Temporary folders
+tmp/
+temp/ 

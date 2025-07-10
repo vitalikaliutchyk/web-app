@@ -21,20 +21,8 @@ const elements = {
     userEmail: document.getElementById('user-email')
 };
 
-// Firebase конфигурация - загружается из config.js
-const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "your-project.firebaseapp.com",
-    projectId: "your-project-id",
-    storageBucket: "your-project.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
-};
-
-// Загружаем конфигурацию из config.js
-if (window.APP_CONFIG && window.APP_CONFIG.firebase) {
-    Object.assign(firebaseConfig, window.APP_CONFIG.firebase);
-}
+// Firebase конфигурация загружается из config.js
+// Конфигурация уже инициализирована в config.js
 
 // Проверка безопасности конфигурации
 function validateFirebaseConfig() {
@@ -55,51 +43,10 @@ function validateFirebaseConfig() {
     return true;
 }
 
-// Инициализация Firebase с проверкой
-if (!validateFirebaseConfig()) {
-    console.error('Invalid Firebase configuration');
-    // Не прерываем выполнение, показываем сообщение пользователю
-    document.addEventListener('DOMContentLoaded', () => {
-        if (typeof showValidationMessage === 'function') {
-            showValidationMessage('Ошибка конфигурации приложения. Обратитесь к администратору.', false);
-        } else {
-            console.error('showValidationMessage function not available');
-        }
-    });
-}
+// Firebase уже инициализирован в config.js
+// Используем глобальные переменные auth и db из config.js
 
-// Инициализация Firebase с обработкой ошибок
-let auth, db;
-
-try {
-    firebase.initializeApp(firebaseConfig);
-    auth = firebase.auth();
-    db = firebase.firestore();
-    
-    // Проверяем доступность Firebase
-    db.enableNetwork().then(() => {
-        console.log('Firebase connection established');
-    }).catch(error => {
-        console.error('Firebase connection failed:', error);
-        // Отложим показ сообщения до загрузки DOM
-        document.addEventListener('DOMContentLoaded', () => {
-            if (typeof showValidationMessage === 'function') {
-                showValidationMessage('Ошибка подключения к базе данных. Проверьте интернет-соединение.', false);
-            }
-        });
-    });
-    
-} catch (error) {
-    console.error('Firebase initialization error:', error);
-    // Отложим показ сообщения до загрузки DOM
-    document.addEventListener('DOMContentLoaded', () => {
-        if (typeof showValidationMessage === 'function') {
-            showValidationMessage('Ошибка инициализации Firebase. Проверьте конфигурацию.', false);
-        }
-    });
-}
-
-let currentUser = null;
+// Глобальные переменные уже определены в config.js
 let repairsUnsubscribe = null;
 let repairsData = []; // Глобальный массив для хранения данных о ремонтах
 
@@ -285,11 +232,14 @@ function checkAuthState() {
     }
     
     auth.onAuthStateChanged(user => {
+        console.log('Auth state changed:', user);
         if (user) {
             currentUser = user;
+            console.log('User logged in:', user.email, user.uid);
             showApp();
             setupRealtimeUpdates();
         } else {
+            console.log('User logged out');
             showAuth();
         }
     });
@@ -306,8 +256,9 @@ function setupRealtimeUpdates() {
     
     // Подписываемся на обновления для текущего пользователя
     repairsUnsubscribe = db.collection('repairs')
-        .where('userId', '==', currentUser.uid)
-        .orderBy('timestamp', 'desc')
+        // Временно убираем фильтр и сортировку для отладки
+        // .where('userId', '==', currentUser.uid)
+        // .orderBy('timestamp', 'desc')
         .onSnapshot(snapshot => {
             repairsData = []; // Очищаем массив перед обновлением
             
@@ -411,6 +362,7 @@ function handleLogin(e) {
 
 function handleRegister(e) {
     e.preventDefault();
+    
     const email = document.getElementById('register-username').value.trim();
     const password = document.getElementById('register-password').value;
     const confirmPassword = document.getElementById('register-confirm').value;
@@ -495,29 +447,19 @@ function validateIdentifier() {
     input.value = value;
     
     if (type === 'reg') {
-        // Расширенная валидация гос. номера РБ: 1234 AB-1, 1234 AB-12
-        const regPattern = /^\d{4}\s[A-ZА-Я]{2}-\d{1,2}$/;
+        // Валидация белорусского гос. номера: 1234 AB-1
+        const regPattern = /^\d{4}\s[A-Z]{2}-[1-8]$/;
         if (regPattern.test(value)) {
-            // Дополнительная проверка на корректные буквы
-            const letters = value.match(/[A-ZА-Я]{2}/)[0];
-            const validLetters = /^[ABEKMHOPCTYXАВЕКМНОРСТУХ]{2}$/;
-            
-            if (validLetters.test(letters)) {
-                input.setCustomValidity('');
-                input.classList.remove('invalid');
-                input.classList.add('valid');
-            } else {
-                input.setCustomValidity('Недопустимые буквы в номере');
-                input.classList.remove('valid');
-                input.classList.add('invalid');
-            }
+            input.setCustomValidity('');
+            input.classList.remove('invalid');
+            input.classList.add('valid');
         } else {
-            input.setCustomValidity('Формат: 1234 AB-1 или 1234 AB-12');
+            input.setCustomValidity('Формат белорусского номера: 1234 AB-1 (цифра после дефиса от 1 до 8)');
             input.classList.remove('valid');
             input.classList.add('invalid');
         }
     } else if (type === 'vin') {
-        // Валидация VIN: последние 4 символа или полный VIN
+        // Валидация VIN: только последние 4 символа
         if (value.length === 4) {
             const vinPattern = /^[A-Z0-9]{4}$/;
             if (vinPattern.test(value)) {
@@ -530,9 +472,9 @@ function validateIdentifier() {
                 input.classList.add('invalid');
             }
         } else if (value.length === 17) {
+            // Если введен полный VIN, извлекаем последние 4 символа
             const fullVinPattern = /^[A-Z0-9]{17}$/;
             if (fullVinPattern.test(value)) {
-                // Извлекаем последние 4 символа
                 input.value = value.slice(-4);
                 input.setCustomValidity('');
                 input.classList.remove('invalid');
@@ -543,7 +485,7 @@ function validateIdentifier() {
                 input.classList.add('invalid');
             }
         } else {
-            input.setCustomValidity('Введите последние 4 символа VIN или полный VIN (17 символов)');
+            input.setCustomValidity('Введите последние 4 символа VIN (например: Z9X8)');
             input.classList.remove('valid');
             input.classList.add('invalid');
         }
@@ -626,13 +568,14 @@ function handleFormSubmit(e) {
     let errorMessage = '';
 
     if (identifierType === 'reg') {
-        const regEx = /^[0-9]{4}\s?[A-Z]{2}-[1-7]$/;
+        // Валидация белорусского гос. номера
+        const regEx = /^[0-9]{4}\s[A-Z]{2}-[1-8]$/;
         isValidIdentifier = regEx.test(identifier);
-        errorMessage = 'Неверный формат гос. номера (Пример: 1234 AB-1)';
+        errorMessage = 'Неверный формат белорусского номера (Пример: 1234 AB-1, цифра от 1 до 8)';
     } else {
-        isValidIdentifier =
-            identifier.length === 4 && /^[A-Z0-9]{4}$/.test(identifier);
-        errorMessage = 'ВИН должен содержать 4 заглавных символа (буквы или цифры)';
+        // Валидация VIN (последние 4 символа)
+        isValidIdentifier = identifier.length === 4 && /^[A-Z0-9]{4}$/.test(identifier);
+        errorMessage = 'VIN должен содержать 4 заглавных символа (буквы или цифры)';
     }
 
     const isValidHours = !isNaN(hours) && hours >= 0.1 && hours <= 24;
@@ -641,26 +584,22 @@ function handleFormSubmit(e) {
         const date = getCurrentDate();
         
         // Проверка аутентификации
+        console.log('Проверка пользователя:', currentUser);
         if (!currentUser || !currentUser.uid) {
             showValidationMessage('Ошибка: пользователь не аутентифицирован', false);
             return;
         }
         
-        // Проверка на дубликаты
-        checkDuplicateRecord(identifier, hours, date).then(isDuplicate => {
-            if (isDuplicate) {
-                const confirmAdd = confirm(
-                    `Запись для ${identifier} на ${date} уже существует. Добавить дубликат?`
-                );
-                if (!confirmAdd) return;
-            }
+        // Временно отключаем проверку дубликатов для отладки
             
-            // Показываем индикатор загрузки
+        // Показываем индикатор загрузки
             appState.isLoading = true;
             const submitBtn = elements.carForm.querySelector('button[type="submit"]');
             const originalText = submitBtn.textContent;
             submitBtn.textContent = 'Добавление...';
             submitBtn.disabled = true;
+            
+            console.log('Добавление записи:', { userId: currentUser.uid, identifier, date, hours });
             
             db.collection('repairs').add({
                 userId: currentUser.uid,
@@ -695,7 +634,6 @@ function handleFormSubmit(e) {
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
             });
-        });
     } else {
         let errors = [];
         if (!isValidIdentifier) errors.push(errorMessage);
