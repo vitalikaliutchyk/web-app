@@ -426,14 +426,14 @@ function validateIdentifier() {
     input.value = value;
     
     if (type === 'reg') {
-        // Валидация белорусского гос. номера: 1234 AB-1
-        const regPattern = /^\d{4}\s[A-Z]{2}-[1-8]$/;
+        // Валидация белорусского гос. номера: 1234AB-1
+        const regPattern = /^\d{4}[A-Z]{2}-[1-8]$/;
         if (regPattern.test(value)) {
             input.setCustomValidity('');
             input.classList.remove('invalid');
             input.classList.add('valid');
         } else {
-            input.setCustomValidity('Формат белорусского номера: 1234 AB-1 (цифра после дефиса от 1 до 8)');
+            input.setCustomValidity('Формат белорусского номера: 1234AB-1 (цифра после дефиса от 1 до 8)');
             input.classList.remove('valid');
             input.classList.add('invalid');
         }
