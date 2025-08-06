@@ -552,9 +552,9 @@ function handleFormSubmit(e) {
 
     if (identifierType === 'reg') {
         // Валидация белорусского гос. номера
-        const regEx = /^[0-9]{4}\s[A-Z]{2}-[1-8]$/;
+        const regEx = /^[0-9]{4}[A-Z]{2}-[1-8]$/;
         isValidIdentifier = regEx.test(identifier);
-        errorMessage = 'Неверный формат белорусского номера (Пример: 1234 AB-1, цифра от 1 до 8)';
+        errorMessage = 'Неверный формат белорусского номера (Пример: 1234AB-1, цифра от 1 до 8)';
     } else {
         // Валидация VIN (последние 4 символа)
         isValidIdentifier = identifier.length === 4 && /^[A-Z0-9]{4}$/.test(identifier);
