@@ -427,7 +427,8 @@ function validateIdentifier() {
     
     if (type === 'reg') {
         // Валидация белорусского гос. номера: 1234AB-1
-        const regPattern = /^\d{4}\s[A-Z]{2}-[1-8]$/;
+        const regPattern = /^\d{4}[A-Z]{2}-[1-8]$/;
+
         if (regPattern.test(value)) {
             input.setCustomValidity('');
             input.classList.remove('invalid');
