@@ -1,4 +1,4 @@
-// Firebase конфигурация для Netlify
+// Firebase конфигурация
 const firebaseConfig = {
     apiKey: "AIzaSyDkUIUXmSF4cYG4EcjMGyvuJAwatNzLVo0",
     authDomain: "autosave-ec76f.firebaseapp.com",
@@ -10,18 +10,4 @@ const firebaseConfig = {
 };
 
 // Инициализация Firebase
-firebase.initializeApp(firebaseConfig);
-
-// Инициализация сервисов
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-// Глобальные переменные
-let currentUser = null;
-let carsData = [];
-let currentPage = 1;
-const itemsPerPage = 10;
-let filteredData = [];
-let searchTerm = '';
-let sortBy = 'timestamp-desc';
-let dateFilter = 'all'; 
+firebase.initializeApp(firebaseConfig); 
