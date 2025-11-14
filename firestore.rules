@@ -1,9 +1,24 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Временно разрешаем все операции для отладки
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    // Правила безопасности для коллекции repairs
+    match /repairs/{repairId} {
+      // Разрешаем создание новых записей только для текущего пользователя
+      allow create: if request.auth != null && 
+                     request.auth.uid == request.resource.data.userId;
+      
+      // Разрешаем чтение только своих записей
+      allow read: if request.auth != null && 
+                   request.auth.uid == resource.data.userId;
+      
+      // Разрешаем обновление только своих записей
+      allow update: if request.auth != null && 
+                     request.auth.uid == resource.data.userId &&
+                     request.auth.uid == request.resource.data.userId;
+      
+      // Разрешаем удаление только своих записей
+      allow delete: if request.auth != null && 
+                     request.auth.uid == resource.data.userId;
     }
   }
 } 
