@@ -47,7 +47,7 @@ class PDFExporter {
             progress.update(60);
 
             // Шаг 4: Рендеринг таблицы (80%)
-            progress.update(60);
+            progress.update(80);
             let y = 120;
             const headers = ['Дата', 'Идентификатор', 'Часы'];
             const colWidths = [220, 450, 180];

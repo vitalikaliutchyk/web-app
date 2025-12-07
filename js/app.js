@@ -56,7 +56,11 @@ class CarRepairApp {
             });
         } catch (error) {
             console.error('Application initialization error:', error);
-            this.ui.showMessage('Ошибка инициализации приложения. Попробуйте обновить страницу.', false);
+            if (this.ui) {
+                this.ui.showMessage('Ошибка инициализации приложения. Попробуйте обновить страницу.', false);
+            } else {
+                alert('Ошибка инициализации приложения. Попробуйте обновить страницу.');
+            }
         }
     }
 
@@ -637,4 +641,3 @@ document.addEventListener('DOMContentLoaded', () => {
     app = new CarRepairApp();
     app.init();
 });
-
